@@ -39,8 +39,9 @@ body { font-family: -apple-system, 'Apple SD Gothic Neo', sans-serif; background
 .wi-sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
 .wi-memo { font-size: 11px; color: #94a3b8; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* [수정] #main, #rv 모두 position:absolute 기반으로 통일 */
 #main { position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; display: flex; flex-direction: column; }
-#rv { position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; display: none; flex-direction: column; gap: 10px; }
+#rv   { position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; display: none; flex-direction: column; gap: 10px; }
 #rv.on { display: flex; }
 
 #leg { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
@@ -239,19 +240,17 @@ var calY = new Date().getFullYear();
 var calM = new Date().getMonth();
 var calSel = null;
 
-// 모달 내 인원 선택값
-var gvFloor = 2;   // 빈 테이블 착석 모달
-var gvWait  = 2;   // 대기자 추가 모달
-var gvRes   = 2;   // 테이블 예약 등록 모달
-var gvRvAdd = 2;   // 예약 관리 탭 예약 추가 모달
-var gvRvEdit= 2;   // 예약 수정 모달
-var activeResTableId = null; // 테이블 예약 등록 시 대상 테이블 id
+var gvFloor = 2;
+var gvWait  = 2;
+var gvRes   = 2;
+var gvRvAdd = 2;
+var gvRvEdit= 2;
+var activeResTableId = null;
 
-// 드래그
 var dragOffset = {x:0, y:0};
 var dragPanelRect = null;
 
-// ── XSS 방어용 이스케이프 ──────────────────────────────────
+// ── XSS 방어 ──────────────────────────────────────────────
 function esc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g,'&amp;')
@@ -261,12 +260,10 @@ function esc(s) {
     .replace(/'/g,'&#39;');
 }
 
-// ── 고유 ID (Date.now + 랜덤) ─────────────────────────────
 function uid() {
   return Date.now() + '_' + Math.random().toString(36).slice(2, 7);
 }
 
-// ── 테이블 초기화 객체 ────────────────────────────────────
 function makeTable(t) {
   return { id:t.id, n:t.n, t:t.t, c:t.c, px:t.px, py:t.py,
            st:'empty', g:0, seatTime:null, res:null };
@@ -303,7 +300,6 @@ function showBadge(s) {
 // ── 유틸 ──────────────────────────────────────────────────
 function pad(n) { return String(n).padStart(2,'0'); }
 
-// [수정] 함수명 el → fmtElapsed (전역 네이밍 충돌 방지)
 function fmtElapsed(ms) {
   var t = Math.floor(ms/1000);
   var h = Math.floor(t/3600);
@@ -312,7 +308,6 @@ function fmtElapsed(ms) {
   return h ? h+':'+pad(m)+':'+pad(s) : pad(m)+':'+pad(s);
 }
 
-// [수정] 함수명 ft2 → fmtTime
 function fmtTime(ts) {
   var d = new Date(ts);
   return pad(d.getHours()) + ':' + pad(d.getMinutes());
@@ -363,11 +358,12 @@ function renderStats() {
 }
 
 // ── 탭 전환 ───────────────────────────────────────────────
+// [수정] display 값을 명시적으로 'flex'/'none' 으로 지정 (Safari에서 '' 복원 시 flex 미적용 버그 방지)
 function switchTab(t) {
   currentTab = t;
   document.getElementById('t1').className = 'tab' + (t==='floor'   ? ' on' : '');
   document.getElementById('t2').className = 'tab' + (t==='reserve' ? ' on' : '');
-  document.getElementById('sb').style.display    = t==='floor'   ? '' : 'none';
+  document.getElementById('sb').style.display    = t==='floor'   ? 'flex' : 'none';
   document.getElementById('main').style.display  = t==='floor'   ? 'flex' : 'none';
   document.getElementById('rv').style.display    = t==='reserve' ? 'flex' : 'none';
   document.getElementById('bedit').style.display = t==='floor'   ? '' : 'none';
@@ -375,8 +371,7 @@ function switchTab(t) {
 }
 
 // ── 캔버스 렌더 ───────────────────────────────────────────
-// [개선] 변경된 테이블만 innerHTML 갱신 (이전 상태 캐시 비교)
-var cardCache = {}; // tid -> last rendered key
+var cardCache = {};
 
 function renderCanvas() {
   var panel = document.getElementById('cv');
@@ -418,11 +413,10 @@ function renderCanvas() {
     var dot     = tb.st === 'occupied' ? '#22c55e' : tb.st === 'reserved' ? '#3b82f6' : '#d1d5db';
     var dshadow = tb.st !== 'empty' ? '0 0 0 3px ' + dot + '33' : 'none';
 
-    // [개선] 내용 캐시 키 — 1초 타이머를 위해 경과분 단위로 비교
     var elapsedMin = tb.st === 'occupied' ? Math.floor((now - tb.seatTime) / 60000) : 0;
     var cacheKey   = tb.st + '|' + tb.g + '|' + (tb.seatTime||0) + '|' + elapsedMin
                    + '|' + (tb.res ? JSON.stringify(tb.res) : '') + '|' + editMode;
-    if (cardCache[tb.id] === cacheKey) return; // 변경 없으면 스킵
+    if (cardCache[tb.id] === cacheKey) return;
     cardCache[tb.id] = cacheKey;
 
     var html = '';
@@ -461,7 +455,6 @@ function renderCanvas() {
     }
     card.innerHTML = html;
 
-    // 예약 등록 버튼 이벤트 (innerHTML 교체 후 재바인딩)
     var rb = card.querySelector('[data-resid]');
     if (rb) {
       rb.addEventListener('click', function(e) {
@@ -550,7 +543,6 @@ function moveDrag(cx, cy, card, tid) {
   S.tables = S.tables.map(function(t) {
     return t.id === tid ? Object.assign({}, t, {px: nx/W*100, py: ny/H*100}) : t;
   });
-  // 드래그 중 캐시 무효화
   cardCache[tid] = '';
 }
 function snapCard(tid) {
@@ -590,7 +582,6 @@ function toggleEdit() {
   var btn  = document.getElementById('bedit');
   var cv   = document.getElementById('cv');
   var hint = document.getElementById('ehint');
-  // 편집 모드 전환 시 캐시 전체 무효화
   S.tables.forEach(function(t){ cardCache[t.id] = ''; });
   if (editMode) {
     btn.textContent = '✅저장'; btn.classList.add('on');
@@ -816,19 +807,19 @@ closeModal(); saveData(); renderAll();
 });
 }
 
-// [수정] 예약 관리 탭 예약 목록과 테이블 홀 예약을 연동
-// 테이블에서 예약 등록 시 S.ress에도 추가하고 테이블 st도 ‘reserved’로 설정
 function openResModal(tid) {
 activeResTableId = tid;
 gvRes = 2;
 var tb = S.tables.filter(function(t){ return t.id === tid; })[0];
+// [수정] tb.c 가 1인 경우에도 gvRes 가 유효하도록 보정
+if (gvRes > tb.c) gvRes = tb.c;
 showModal(
 ‘<div class="md-hd"><span class="md-title">’+esc(tb.n)+’ 예약 등록</span><button class="md-x" id="mxbtn">×</button></div>’
 + ‘<div class="mb">’
 + ‘<div class="fg"><label class="fl">예약자 이름</label><input class="fi" id="rn" placeholder="고객 이름"></div>’
 + ‘<div class="fg"><label class="fl">인원</label><div class="gbs" id="rgbs">’
 +   Array.from({length:tb.c}, function(_, i) {
-return ‘<button class="gb'+(i+1===2?' pu':'')+'" data-n="'+(i+1)+'">’+(i+1)+’</button>’;
+return ‘<button class="gb'+(i+1===gvRes?' pu':'')+'" data-n="'+(i+1)+'">’+(i+1)+’</button>’;
 }).join(’’)
 + ‘</div></div>’
 + ‘<div class="g2">’
@@ -849,13 +840,11 @@ if (!nm || !rt) { alert(‘이름과 시간을 입력하세요’); return; }
 var phone = document.getElementById(‘rp’).value;
 var memo  = document.getElementById(‘rm’).value;
 var resObj = {name:nm, g:gvRes, time:rt, date:rd, phone:phone, memo:memo};
-// 테이블 상태 업데이트
 S.tables = S.tables.map(function(t) {
 return t.id === activeResTableId
 ? Object.assign({}, t, {st:‘reserved’, res:resObj})
 : t;
 });
-// [수정] 예약 관리 탭에도 동기화
 S.ress.push({
 id:    uid(),
 nm:    nm,
@@ -1092,7 +1081,6 @@ S.tables = S.tables.map(function(t) {
 return Object.assign({}, t, {st:‘empty’, g:0, seatTime:null, res:null});
 });
 S.waits = [];
-// 캐시 전체 무효화
 S.tables.forEach(function(t){ cardCache[t.id] = ‘’; });
 closeModal(); saveData(); renderAll();
 });
@@ -1101,9 +1089,7 @@ closeModal(); saveData(); renderAll();
 // ── 모달 ──────────────────────────────────────────────────
 function showModal(html) {
 var mdc = document.getElementById(‘mdc’);
-// mdc는 항상 .md 클래스 wrapper
 mdc.className = ‘md’;
-// md-lg 가 필요한 경우 html에서 감지 (openAddRv, openRvDetail, openEditRv)
 mdc.innerHTML = html;
 document.getElementById(‘mo’).classList.add(‘on’);
 var xbtn = document.getElementById(‘mxbtn’);
@@ -1143,6 +1129,8 @@ document.getElementById(‘bedit’).addEventListener(‘click’, toggleEdit);
 document.getElementById(‘breset’).addEventListener(‘click’, confirmReset);
 document.getElementById(‘bwait’).addEventListener(‘click’, openWaitModal);
 document.getElementById(‘baddRv’).addEventListener(‘click’, openAddRv);
+
+// [수정] calM– / calY– : em dash(–) → 정상 감소 연산자(–)로 교체
 document.getElementById(‘bcalp’).addEventListener(‘click’, function() {
 calM–;
 if (calM < 0) { calM = 11; calY–; }
@@ -1154,7 +1142,12 @@ if (calM > 11) { calM = 0; calY++; }
 renderCal(); renderRvList();
 });
 document.getElementById(‘rvsrch’).addEventListener(‘input’, renderRvList);
+
+// [수정] 모달 백드롭 클릭 처리 — touchend 기반으로 Safari 오작동 방지
 document.getElementById(‘mo’).addEventListener(‘click’, function(e) {
+if (e.target === this) closeModal();
+});
+document.getElementById(‘mo’).addEventListener(‘touchend’, function(e) {
 if (e.target === this) closeModal();
 });
 
@@ -1173,7 +1166,6 @@ renderHeader();
 }, 1000);
 
 window.addEventListener(‘resize’, function() {
-// 리사이즈 시 캐시 무효화 후 재렌더
 S.tables.forEach(function(t){ cardCache[t.id] = ‘’; });
 renderCanvas();
 });
