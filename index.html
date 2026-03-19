@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="테이블현황">
+<title>테이블 현황</title>
+<style>
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html, body { height:100%; overflow:hidden; background:#f1f5f9; font-family:'Apple SD Gothic Neo','Pretendard',-apple-system,sans-serif; color:#1e293b; user-select:none; -webkit-user-select:none; }
+
+/* ── 헤더 ── */
+#header { position:fixed; top:0; left:0; right:0; height:56px; z-index:300; background:#fff; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between; padding:0 14px; box-shadow:0 1px 6px rgba(0,0,0,0.07); }
+.logo { width:34px; height:34px; background:linear-gradient(135deg,#3b82f6,#6366f1); border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:17px; }
+.header-title { font-weight:800; font-size:16px; letter-spacing:-0.5px; }
+.header-date  { font-size:11px; color:#94a3b8; margin-top:1px; }
+.header-right { display:flex; align-items:center; gap:7px; flex-wrap:wrap; justify-content:flex-end; }
+.chip { border-radius:20px; padding:4px 10px; font-size:12px; font-weight:700; border:1px solid; }
+#save-badge { font-size:12px; font-weight:600; }
+
+/* ── 탭바 ── */
+#tabbar { position:fixed; top:56px; left:0; right:0; height:46px; z-index:299; background:#fff; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; padding:0 14px; gap:4px; }
+.tab-btn { padding:6px 16px; border-radius:20px; border:none; font-size:13px; font-weight:700; cursor:pointer; background:transparent; color:#94a3b8; transition:all 0.15s; }
+.tab-btn.active { background:#3b82f6; color:#fff; }
+
+/* ── 앱 레이아웃 ── */
+#app { display:flex; height:100vh; padding-top:102px; }
+
+/* ── 사이드바 ── */
+#sidebar { width:196px; flex-shrink:0; background:#fff; border-right:1px solid #e2e8f0; display:flex; flex-direction:column; }
+.sidebar-head { padding:12px 13px 9px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; justify-content:space-between; }
+.sidebar-label { font-weight:700; font-size:13px; color:#64748b; }
+#waitlist { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+.wait-item { padding:11px 13px; border-bottom:1px solid #f8fafc; cursor:pointer; }
+.wait-num { width:22px; height:22px; border-radius:50%; background:#e0e7ff; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; color:#6366f1; flex-shrink:0; }
+.wait-name { font-weight:700; font-size:14px; margin-left:6px; }
+.wait-elapsed { margin-top:3px; font-size:11px; color:#94a3b8; }
+.empty-msg { padding:24px 13px; text-align:center; color:#cbd5e1; font-size:13px; }
+
+/* ── 메인 ── */
+#main { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:13px; }
+
+/* ── 예약관리 뷰 ── */
+#reserve-view { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:13px; display:none; flex-direction:column; gap:13px; }
+#reserve-view.active { display:flex; }
+#main.hidden { display:none; }
+#sidebar.hidden { display:none; }
+
+/* ── 범례 ── */
+#legend { display:flex; gap:9px; margin-bottom:13px; flex-wrap:wrap; align-items:center; }
+.legend-item { display:flex; align-items:center; gap:5px; font-size:12px; color:#64748b; }
+.legend-dot { width:9px; height:9px; border-radius:3px; }
+
+/* ── 캔버스 ── */
+#canvas-panel { background:#fff; border-radius:16px; border:1px solid #e2e8f0; box-shadow:0 1px 8px rgba(0,0,0,0.04); position:relative; overflow:hidden; width:100%; padding-bottom:75%; }
+#canvas-inner { position:absolute; inset:0; }
+#edit-banner { display:none; position:absolute; top:0; left:0; right:0; background:rgba(99,102,241,0.1); border-bottom:2px dashed #6366f1; padding:7px 13px; font-size:12px; color:#6366f1; font-weight:700; z-index:10; text-align:center; }
+#canvas-panel.edit-mode #edit-banner { display:block; }
+#canvas-panel.edit-mode { border:2px dashed #6366f1; }
+
+/* ── 테이블 카드 ── */
+.tcard { position:absolute; cursor:pointer; border-radius:13px; border:2px solid; transition:box-shadow 0.15s; display:flex; flex-direction:column; }
+.tcard.bar-card { border-radius:9px; flex-direction:row; align-items:center; justify-content:space-between; }
+.tcard.dragging { opacity:0.85; z-index:100; box-shadow:0 12px 32px rgba(0,0,0,0.18); }
+
+/* ── 통계 ── */
+#stats { display:grid; grid-template-columns:repeat(4,1fr); gap:9px; margin-top:13px; }
+.stat-card { background:#fff; border-radius:13px; padding:11px 13px; border:1px solid #e2e8f0; display:flex; align-items:center; gap:9px; }
+.stat-icon { width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.stat-label { font-size:11px; color:#94a3b8; }
+.stat-value { font-weight:800; font-size:16px; }
+
+/* ── 버튼 ── */
+.btn-primary { background:#3b82f6; color:#fff; border:none; border-radius:8px; padding:6px 12px; font-size:13px; font-weight:700; cursor:pointer; }
+.btn-ghost   { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:6px 12px; font-size:13px; color:#64748b; cursor:pointer; font-weight:600; }
+.btn-edit    { background:#6366f1; color:#fff; border:none; border-radius:8px; padding:6px 12px; font-size:13px; font-weight:700; cursor:pointer; }
+.btn-edit.active { background:#ef4444; }
+
+/* ── 예약 관리 패널 ── */
+.rv-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.rv-search { flex:1; padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:11px; font-size:14px; outline:none; -webkit-appearance:none; font-family:inherit; }
+.rv-search:focus { border-color:#3b82f6; }
+
+/* 달력 */
+#cal-wrap { background:#fff; border-radius:16px; border:1px solid #e2e8f0; padding:16px; box-shadow:0 1px 6px rgba(0,0,0,0.04); }
+.cal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.cal-month { font-weight:800; font-size:16px; }
+.cal-nav { background:none; border:1px solid #e2e8f0; border-radius:8px; width:32px; height:32px; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; }
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+.cal-dow { text-align:center; font-size:11px; font-weight:700; color:#94a3b8; padding:4px 0; }
+.cal-dow:first-child { color:#ef4444; }
+.cal-dow:last-child  { color:#3b82f6; }
+.cal-day { text-align:center; padding:6px 2px; border-radius:8px; font-size:13px; cursor:pointer; position:relative; min-height:36px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; }
+.cal-day:hover { background:#f1f5f9; }
+.cal-day.today { background:#eff6ff; color:#3b82f6; font-weight:800; }
+.cal-day.selected { background:#3b82f6; color:#fff; font-weight:800; }
+.cal-day.selected .cal-dot { background:#fff; }
+.cal-day.other { color:#cbd5e1; }
+.cal-dot { width:5px; height:5px; border-radius:50%; background:#3b82f6; }
+.cal-day.sun { color:#ef4444; }
+.cal-day.sat { color:#3b82f6; }
+.cal-day.selected.sun, .cal-day.selected.sat { color:#fff; }
+
+/* 예약 목록 */
+#rv-list-wrap { background:#fff; border-radius:16px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 1px 6px rgba(0,0,0,0.04); }
+.rv-list-head { padding:13px 16px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; justify-content:space-between; }
+.rv-list-title { font-weight:800; font-size:15px; }
+#rv-list { }
+.rv-item { padding:13px 16px; border-bottom:1px solid #f8fafc; cursor:pointer; display:flex; align-items:flex-start; gap:12px; }
+.rv-item:last-child { border-bottom:none; }
+.rv-time-badge { background:#eff6ff; color:#3b82f6; border-radius:8px; padding:5px 9px; font-size:13px; font-weight:800; flex-shrink:0; min-width:52px; text-align:center; }
+.rv-item-body { flex:1; min-width:0; }
+.rv-item-name { font-weight:700; font-size:15px; }
+.rv-item-sub  { font-size:12px; color:#64748b; margin-top:2px; }
+.rv-item-memo { font-size:12px; color:#94a3b8; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.rv-status-badge { font-size:11px; font-weight:700; border-radius:6px; padding:3px 8px; flex-shrink:0; }
+
+/* ── 모달 ── */
+.overlay { position:fixed; inset:0; background:rgba(15,23,42,0.5); z-index:500; display:flex; align-items:center; justify-content:center; padding:16px; overflow-y:auto; }
+.modal { background:#fff; border-radius:20px; padding:20px 20px 16px; width:100%; max-width:380px; box-shadow:0 24px 64px rgba(0,0,0,0.22); }
+.modal-lg { max-width:440px; }
+.modal-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; }
+.modal-title { font-weight:800; font-size:16px; }
+.modal-close { background:#f1f5f9; border:none; border-radius:50%; width:32px; height:32px; font-size:17px; cursor:pointer; color:#64748b; display:flex; align-items:center; justify-content:center; }
+.modal-body { display:flex; flex-direction:column; gap:13px; }
+.info-box { border-radius:13px; border:1px solid; padding:14px 16px; margin-bottom:14px; }
+.info-row { display:flex; justify-content:space-between; margin-bottom:7px; font-size:14px; }
+.info-row:last-child { margin-bottom:0; }
+.info-label { color:#64748b; }
+.info-value { font-weight:700; }
+
+/* 인원 버튼 */
+.guest-btns { display:flex; gap:7px; flex-wrap:wrap; }
+.guest-btn { width:46px; height:46px; border-radius:11px; border:2px solid #e2e8f0; background:#fff; color:#64748b; font-weight:800; font-size:16px; cursor:pointer; }
+.guest-btn.active-blue   { border-color:#3b82f6; background:#eff6ff; color:#3b82f6; }
+.guest-btn.active-purple { border-color:#8b5cf6; background:#f5f3ff; color:#8b5cf6; }
+.guest-btn.active-green  { border-color:#10b981; background:#ecfdf5; color:#065f46; }
+
+/* 액션 버튼 */
+.action-btns { display:flex; gap:8px; }
+.action-btn { flex:1; padding:13px 0; border:none; border-radius:11px; font-weight:700; font-size:14px; cursor:pointer; color:#fff; }
+
+/* 폼 */
+.form-group { display:flex; flex-direction:column; gap:5px; }
+.form-label { font-size:13px; color:#64748b; }
+.form-input { width:100%; padding:11px 13px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; outline:none; -webkit-appearance:none; font-family:inherit; }
+.form-input:focus { border-color:#3b82f6; }
+textarea.form-input { resize:none; min-height:72px; }
+.form-input[type=date]::-webkit-inner-spin-button,
+.form-input[type=date]::-webkit-calendar-picker-indicator { opacity:1; }
+
+/* 테이블 선택 */
+.table-pick-btn { padding:12px 14px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:11px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; font-size:14px; font-weight:700; width:100%; }
+.table-pick-sub { color:#94a3b8; font-size:12px; font-weight:500; }
+</style>
+
+</head>
+<body>
+
+<!-- 헤더 -->
+
+<div id="header">
+  <div style="display:flex;align-items:center;gap:9px">
+    <div class="logo">🍽</div>
+    <div>
+      <div class="header-title">테이블 현황</div>
+      <div class="header-date" id="header-date"></div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span id="save-badge"></span>
+    <span class="chip" id="chip-occupied" style="color:#3b82f6;border-color:#3b82f629;background:#3b82f615"></span>
+    <span class="chip" id="chip-reserved" style="color:#8b5cf6;border-color:#8b5cf629;background:#8b5cf615"></span>
+    <span class="chip" id="chip-wait"     style="color:#f59e0b;border-color:#f59e0b29;background:#f59e0b15"></span>
+    <button class="btn-edit" id="btn-edit" onclick="toggleEditMode()">✏️ 배치 편집</button>
+    <button class="btn-ghost" onclick="confirmReset()">초기화</button>
+  </div>
+</div>
+
+<!-- 탭바 -->
+
+<div id="tabbar">
+  <button class="tab-btn active" id="tab-floor" onclick="switchTab('floor')">🪑 홀 현황</button>
+  <button class="tab-btn"        id="tab-reserve" onclick="switchTab('reserve')">📋 예약 관리</button>
+</div>
+
+<div id="app">
+  <!-- 사이드바 (홀 현황 전용) -->
+  <div id="sidebar">
+    <div class="sidebar-head">
+      <span class="sidebar-label">대기자</span>
+      <button class="btn-primary" onclick="openWaitModal()">+ 추가</button>
+    </div>
+    <div id="waitlist"></div>
+  </div>
+
+  <!-- 홀 현황 메인 -->
+
+  <div id="main">
+    <div id="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#cbd5e1"></div>빈 테이블</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>예약</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ca8a04"></div>~1시간</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ea580c"></div>1~1.5시간</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#dc2626"></div>1.5시간+</div>
+      <div class="legend-item" style="margin-left:auto;color:#6366f1;font-weight:700;font-size:12px" id="edit-hint"></div>
+    </div>
+    <div id="canvas-panel">
+      <div id="edit-banner">✏️ 배치 편집 모드 — 테이블을 길게 눌러 드래그. 완료 후 [저장] 클릭</div>
+      <div id="canvas-inner"></div>
+    </div>
+    <div id="stats">
+      <div class="stat-card"><div class="stat-icon" style="background:#3b82f615">👥</div><div><div class="stat-label">착석 인원</div><div class="stat-value" id="stat-guests" style="color:#3b82f6">0명</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#f59e0b15">🪑</div><div><div class="stat-label">착석 테이블</div><div class="stat-value" id="stat-occ" style="color:#f59e0b">0개</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#10b98115">⬜</div><div><div class="stat-label">빈 테이블</div><div class="stat-value" id="stat-empty" style="color:#10b981">0개</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#8b5cf615">⏳</div><div><div class="stat-label">대기</div><div class="stat-value" id="stat-wait" style="color:#8b5cf6">0팀</div></div></div>
+    </div>
+  </div>
+
+  <!-- 예약 관리 뷰 -->
+
+  <div id="reserve-view">
+    <!-- 상단: 검색 + 추가 -->
+    <div class="rv-top">
+      <input class="rv-search" id="rv-search" type="search" placeholder="🔍 이름, 연락처 검색…" oninput="renderReserveView()">
+      <button class="btn-primary" onclick="openAddReservation()">+ 예약 추가</button>
+    </div>
+
+```
+<!-- 달력 -->
+<div id="cal-wrap">
+  <div class="cal-head">
+    <button class="cal-nav" onclick="calPrev()">‹</button>
+    <span class="cal-month" id="cal-month-label"></span>
+    <button class="cal-nav" onclick="calNext()">›</button>
+  </div>
+  <div class="cal-grid" id="cal-dow-row">
+    <div class="cal-dow">일</div><div class="cal-dow">월</div><div class="cal-dow">화</div>
+    <div class="cal-dow">수</div><div class="cal-dow">목</div><div class="cal-dow">금</div>
+    <div class="cal-dow">토</div>
+  </div>
+  <div class="cal-grid" id="cal-grid"></div>
+</div>
+
+<!-- 예약 목록 -->
+<div id="rv-list-wrap">
+  <div class="rv-list-head">
+    <span class="rv-list-title" id="rv-list-title">전체 예약</span>
+    <span style="font-size:12px;color:#94a3b8" id="rv-list-count"></span>
+  </div>
+  <div id="rv-list"></div>
+</div>
+```
+
+  </div>
+</div>
+
+<div id="modal-root"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// 상태
+// ═══════════════════════════════════════════════════
+const STORAGE_KEY = 'restaurant-v4';
+
+// 배치: 1 2 3 (상단 가로줄)
+//        바1  4
+//        바2  5
+//        바3  6
+const INITIAL_TABLES = [
+  { id:1, name:'1번', type:'4인', capacity:4, px:2,  py:3  },
+  { id:2, name:'2번', type:'4인', capacity:4, px:35, py:3  },
+  { id:3, name:'3번', type:'4인', capacity:4, px:68, py:3  },
+  { id:4, name:'4번', type:'4인', capacity:4, px:68, py:36 },
+  { id:5, name:'5번', type:'4인', capacity:4, px:68, py:62 },
+  { id:6, name:'6번', type:'2인', capacity:2, px:68, py:84 },
+  { id:7, name:'바1',  type:'바', capacity:2, px:2,  py:37 },
+  { id:8, name:'바2',  type:'바', capacity:2, px:2,  py:58 },
+  { id:9, name:'바3',  type:'바', capacity:2, px:2,  py:79 },
+];
+
+let state = {
+  tables:       INITIAL_TABLES.map(t => ({ ...t, status:'empty', guests:0, seatTime:null, reservation:null })),
+  waitlist:     [],
+  reservations: [],   // 독립 예약 목록
+};
+
+let currentTab   = 'floor';
+let editMode     = false;
+let saveTimer    = null;
+
+// 달력 상태
+const todayD  = new Date();
+let calYear   = todayD.getFullYear();
+let calMonth  = todayD.getMonth();
+let calSelected = null; // 'YYYY-MM-DD' or null
+
+// ── 저장/로드 ─────────────────────────────────
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s.tables)       state.tables       = s.tables;
+      if (s.waitlist)     state.waitlist     = s.waitlist;
+      if (s.reservations) state.reservations = s.reservations;
+    }
+  } catch(e) {}
+}
+
+function saveState() {
+  if (saveTimer) clearTimeout(saveTimer);
+  setBadge('saving');
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      setBadge('saved');
+      setTimeout(() => setBadge('idle'), 2000);
+    } catch(e) { setBadge('error'); }
+  }, 600);
+}
+
+function setBadge(s) {
+  const el = document.getElementById('save-badge');
+  const map = { saving:['#f59e0b','저장 중…'], saved:['#10b981','✓ 저장됨'], error:['#ef4444','⚠ 실패'], idle:['transparent',''] };
+  const [c, t] = map[s] || map.idle;
+  el.style.color = c; el.textContent = t;
+}
+
+// ── 유틸 ──────────────────────────────────────
+function pad(n) { return String(n).padStart(2,'0'); }
+function elapsed(ms) {
+  const t = Math.floor(ms/1000), h = Math.floor(t/3600), m = Math.floor((t%3600)/60), s = t%60;
+  return h>0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
+function fmtTime(ts) { const d=new Date(ts); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function todayStr() { const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function dateLabel(str) {
+  if (!str) return '';
+  const [y,m,d] = str.split('-');
+  const dt = new Date(+y,+m-1,+d);
+  return dt.toLocaleDateString('ko-KR',{ month:'long', day:'numeric', weekday:'short' });
+}
+
+function getColors(status, seatTime) {
+  if (status==='empty')    return { bg:'#f8fafc', border:'#cbd5e1', text:'#94a3b8', ring:'#cbd5e1' };
+  if (status==='reserved') return { bg:'#eff6ff', border:'#3b82f6', text:'#1d4ed8', ring:'#93c5fd' };
+  const e = Date.now() - seatTime;
+  if (e < 3600000) return { bg:'#fefce8', border:'#ca8a04', text:'#78350f', ring:'#fde047' };
+  if (e < 5400000) return { bg:'#fff7ed', border:'#ea580c', text:'#7c2d12', ring:'#fb923c' };
+  return               { bg:'#fef2f2', border:'#dc2626', text:'#7f1d1d', ring:'#fca5a5' };
+}
+
+// ═══════════════════════════════════════════════════
+// 탭 전환
+// ═══════════════════════════════════════════════════
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-floor').classList.toggle('active', tab==='floor');
+  document.getElementById('tab-reserve').classList.toggle('active', tab==='reserve');
+
+  const sidebar = document.getElementById('sidebar');
+  const main    = document.getElementById('main');
+  const rv      = document.getElementById('reserve-view');
+  const btnEdit = document.getElementById('btn-edit');
+
+  if (tab === 'floor') {
+    sidebar.classList.remove('hidden');
+    main.classList.remove('hidden');
+    rv.classList.remove('active');
+    btnEdit.style.display = '';
+    render();
+  } else {
+    sidebar.classList.add('hidden');
+    main.classList.add('hidden');
+    rv.classList.add('active');
+    btnEdit.style.display = 'none';
+    renderReserveView();
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// 홀 현황 렌더
+// ═══════════════════════════════════════════════════
+function render() {
+  renderHeader();
+  renderCanvas();
+  renderWaitlist();
+  renderStats();
+}
+
+function renderHeader() {
+  const now = new Date();
+  document.getElementById('header-date').textContent =
+    now.toLocaleDateString('ko-KR',{ month:'long', day:'numeric', weekday:'short' });
+  const occ = state.tables.filter(t=>t.status==='occupied').length;
+  const rsv = state.tables.filter(t=>t.status==='reserved').length;
+  document.getElementById('chip-occupied').textContent = `착석 ${occ}/${state.tables.length}`;
+  document.getElementById('chip-reserved').textContent = `예약 ${rsv}`;
+  document.getElementById('chip-wait').textContent     = `대기 ${state.waitlist.length}팀`;
+}
+
+function renderStats() {
+  const guests = state.tables.reduce((a,t)=>a+(t.status==='occupied'?t.guests:0),0);
+  document.getElementById('stat-guests').textContent = `${guests}명`;
+  document.getElementById('stat-occ').textContent    = `${state.tables.filter(t=>t.status==='occupied').length}개`;
+  document.getElementById('stat-empty').textContent  = `${state.tables.filter(t=>t.status==='empty').length}개`;
+  document.getElementById('stat-wait').textContent   = `${state.waitlist.length}팀`;
+}
+
+// ── 캔버스 ────────────────────────────────────
+function cardSize(type, W, H) {
+  if (type==='바')  return { w:Math.round(W*0.28), h:Math.round(H*0.115) };
+  if (type==='2인') return { w:Math.round(W*0.28), h:Math.round(H*0.19)  };
+  return                  { w:Math.round(W*0.28), h:Math.round(H*0.21)  };
+}
+
+function renderCanvas() {
+  const panel = document.getElementById('canvas-panel');
+  const inner = document.getElementById('canvas-inner');
+  const W = panel.offsetWidth, H = panel.offsetHeight;
+  if (!W||!H) { requestAnimationFrame(renderCanvas); return; }
+
+  state.tables.forEach(table => {
+    let card = document.getElementById(`tcard-${table.id}`);
+    if (!card) {
+      card = document.createElement('div');
+      card.id = `tcard-${table.id}`;
+      card.className = 'tcard' + (table.type==='바'?' bar-card':'');
+      inner.appendChild(card);
+      bindCardEvents(card, table.id);
+    }
+    const col = getColors(table.status, table.seatTime);
+    const sz  = cardSize(table.type, W, H);
+    const x   = Math.round(table.px/100*W);
+    const y   = Math.round(table.py/100*H);
+    card.style.cssText = `left:${x}px;top:${y}px;width:${sz.w}px;height:${sz.h}px;background:${col.bg};border-color:${col.border};padding:${table.type==='바'?'9px 11px':'12px 12px 10px'};cursor:${editMode?'grab':'pointer'};position:absolute;border-radius:${table.type==='바'?'9px':'13px'};border:2px solid ${col.border};display:flex;flex-direction:${table.type==='바'?'row':'column'};align-items:${table.type==='바'?'center':'flex-start'};justify-content:${table.type==='바'?'space-between':'flex-start'};overflow:hidden;-webkit-tap-highlight-color:transparent;${editMode?'box-shadow:0 0 0 2px #6366f155;':''}`;
+
+    const dotC = table.status==='occupied'?'#22c55e':table.status==='reserved'?'#3b82f6':'#d1d5db';
+    const dotS = table.status!=='empty'?`0 0 0 3px ${dotC}33`:'none';
+    const now  = Date.now();
+    const isBar = table.type==='바';
+
+    if (isBar) {
+      card.innerHTML = `
+        <div><div style="font-weight:800;font-size:13px">${table.name}</div><div style="font-size:10px;color:#94a3b8;margin-top:1px">바 · 2인</div></div>
+        <div style="text-align:right">
+          ${table.status==='occupied'
+            ? `<div style="font-size:11px;color:${col.text};font-weight:700">${table.guests}명</div><div style="font-size:11px;color:${col.text}">${elapsed(now-table.seatTime)}</div>`
+            : table.status==='reserved'
+            ? `<div style="font-size:11px;color:#3b82f6;font-weight:700">${table.reservation?.time||''}</div>`
+            : `<div style="width:10px;height:10px;border-radius:50%;background:${dotC};box-shadow:${dotS}"></div>`}
+        </div>`;
+    } else {
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;width:100%;margin-bottom:6px">
+          <div><div style="font-weight:800;font-size:14px">${table.name}</div><div style="font-size:10px;color:#94a3b8;margin-top:1px">${table.type}·${table.capacity}인</div></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:${dotC};box-shadow:${dotS};flex-shrink:0;margin-top:2px"></div>
+        </div>
+        ${table.status==='occupied'
+          ? `<div style="font-size:11px;color:${col.text};font-weight:700">👤 ${table.guests}명</div><div style="font-size:11px;color:${col.text};font-weight:600;margin-top:2px">⏱ ${elapsed(now-table.seatTime)}</div>`
+          : table.status==='reserved'
+          ? `<div style="font-size:11px;color:#3b82f6;font-weight:700">📋 ${table.reservation?.name||''}</div><div style="font-size:10px;color:#6b7280;margin-top:2px">${table.reservation?.time||''} · ${table.reservation?.guests||''}명</div>`
+          : editMode?'':`<button onclick="event.stopPropagation();openReserveModal(${table.id})" style="margin-top:4px;font-size:11px;color:#94a3b8;background:#f1f5f9;border:none;border-radius:6px;padding:3px 8px;cursor:pointer">예약 등록</button>`}`;
+    }
+  });
+}
+
+// ── 드래그 ────────────────────────────────────
+let dragOffset = {x:0,y:0}, dragPanel = null;
+
+function bindCardEvents(card, tableId) {
+  let isDragging=false, longTimer=null, tapStart=0;
+
+  card.addEventListener('touchstart', e => {
+    tapStart = Date.now();
+    if (!editMode) return;
+    const t = e.touches[0];
+    longTimer = setTimeout(() => { isDragging=true; card.classList.add('dragging'); startDrag(card,tableId,t.clientX,t.clientY); }, 150);
+  }, {passive:true});
+
+  card.addEventListener('touchmove', e => {
+    if (!editMode) return;
+    if (longTimer) { clearTimeout(longTimer); longTimer=null; }
+    if (!isDragging) return;
+    e.preventDefault();
+    moveDrag(e.touches[0].clientX, e.touches[0].clientY, card, tableId);
+  }, {passive:false});
+
+  card.addEventListener('touchend', () => {
+    if (longTimer) { clearTimeout(longTimer); longTimer=null; }
+    if (isDragging) {
+      isDragging=false; card.classList.remove('dragging');
+      snapTable(tableId); saveState(); return;
+    }
+    if (!editMode && Date.now()-tapStart < 300) openTableModal(tableId);
+  });
+
+  card.addEventListener('mousedown', e => {
+    if (!editMode) return;
+    isDragging=true; card.classList.add('dragging'); startDrag(card,tableId,e.clientX,e.clientY);
+    const mh = ev => moveDrag(ev.clientX,ev.clientY,card,tableId);
+    const uh = () => {
+      isDragging=false; card.classList.remove('dragging');
+      snapTable(tableId); saveState();
+      document.removeEventListener('mousemove',mh); document.removeEventListener('mouseup',uh);
+    };
+    document.addEventListener('mousemove',mh); document.addEventListener('mouseup',uh);
+  });
+
+  card.addEventListener('click', () => { if (!editMode) openTableModal(tableId); });
+}
+
+function startDrag(card, tableId, cx, cy) {
+  const r = card.getBoundingClientRect();
+  dragOffset = { x:cx-r.left, y:cy-r.top };
+  dragPanel  = document.getElementById('canvas-panel').getBoundingClientRect();
+}
+
+function moveDrag(cx, cy, card, tableId) {
+  if (!dragPanel) return;
+  const panel = document.getElementById('canvas-panel');
+  const W=panel.offsetWidth, H=panel.offsetHeight;
+  const sz = cardSize(state.tables.find(t=>t.id===tableId)?.type, W, H);
+  let nx=cx-dragPanel.left-dragOffset.x, ny=cy-dragPanel.top-dragOffset.y;
+  nx=Math.max(0,Math.min(W-sz.w,nx)); ny=Math.max(0,Math.min(H-sz.h,ny));
+  card.style.left=nx+'px'; card.style.top=ny+'px';
+  state.tables = state.tables.map(t => t.id===tableId ? {...t, px:nx/W*100, py:ny/H*100} : t);
+}
+
+// ── 스냅 ─────────────────────────────────────
+// 드래그를 놓으면 다른 카드 엣지 또는 균등 그리드에 자연스럽게 붙음
+function snapTable(tableId) {
+  const panel = document.getElementById('canvas-panel');
+  const W = panel.offsetWidth, H = panel.offsetHeight;
+  const SNAP = Math.round(W * 0.02); // 스냅 반경: 캔버스 너비의 2%
+  const GAP  = Math.round(W * 0.015); // 카드 간격
+
+  const dragged = state.tables.find(t=>t.id===tableId);
+  if (!dragged) return;
+  const sz = cardSize(dragged.type, W, H);
+  let px = dragged.px/100*W;
+  let py = dragged.py/100*H;
+
+  // 다른 카드들의 엣지 수집
+  const others = state.tables.filter(t=>t.id!==tableId);
+  const xAnchors = [0, W - sz.w]; // 캔버스 좌우 가장자리
+  const yAnchors = [0, H - sz.h]; // 캔버스 상하 가장자리
+
+  others.forEach(t => {
+    const s2 = cardSize(t.type, W, H);
+    const ox = t.px/100*W, oy = t.py/100*H;
+    // 왼쪽 정렬
+    xAnchors.push(ox);
+    // 오른쪽 옆에 붙기
+    xAnchors.push(ox + s2.w + GAP);
+    // 오른쪽 정렬
+    xAnchors.push(ox + s2.w - sz.w);
+    // 위 정렬
+    yAnchors.push(oy);
+    // 아래에 붙기
+    yAnchors.push(oy + s2.h + GAP);
+    // 아래 정렬
+    yAnchors.push(oy + s2.h - sz.h);
+  });
+
+  // X 스냅
+  let bestX = px, bestDX = SNAP;
+  xAnchors.forEach(ax => {
+    const d = Math.abs(px - ax);
+    if (d < bestDX) { bestDX = d; bestX = ax; }
+  });
+  // Y 스냅
+  let bestY = py, bestDY = SNAP;
+  yAnchors.forEach(ay => {
+    const d = Math.abs(py - ay);
+    if (d < bestDY) { bestDY = d; bestY = ay; }
+  });
+
+  // 경계 클램프
+  bestX = Math.max(0, Math.min(W - sz.w, bestX));
+  bestY = Math.max(0, Math.min(H - sz.h, bestY));
+
+  // 부드러운 애니메이션으로 이동
+  const card = document.getElementById(`tcard-${tableId}`);
+  if (card) {
+    card.style.transition = 'left 0.18s ease, top 0.18s ease';
+    card.style.left = bestX + 'px';
+    card.style.top  = bestY + 'px';
+    setTimeout(() => { if(card) card.style.transition = ''; }, 200);
+  }
+  state.tables = state.tables.map(t => t.id===tableId ? {...t, px:bestX/W*100, py:bestY/H*100} : t);
+}
+
+function toggleEditMode() {
+  editMode = !editMode;
+  const btn=document.getElementById('btn-edit'), panel=document.getElementById('canvas-panel'), hint=document.getElementById('edit-hint');
+  if (editMode) { btn.textContent='✅ 배치 저장'; btn.classList.add('active'); panel.classList.add('edit-mode'); hint.textContent='길게 누르고 드래그'; }
+  else          { btn.textContent='✏️ 배치 편집'; btn.classList.remove('active'); panel.classList.remove('edit-mode'); hint.textContent=''; saveState(); }
+  renderCanvas();
+}
+
+// ── 대기자 ────────────────────────────────────
+function renderWaitlist() {
+  const el=document.getElementById('waitlist');
+  if (!state.waitlist.length) { el.innerHTML='<div class="empty-msg">대기자 없음</div>'; return; }
+  el.innerHTML = state.waitlist.map((w,i)=>`
+    <div class="wait-item" onclick="openSeatWaiterModal(${w.id})">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center"><div class="wait-num">${i+1}</div><span class="wait-name">${w.name}</span></div>
+        <span style="font-size:13px;color:#475569;font-weight:600">${w.guests}명</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px">
+        <div class="wait-elapsed">대기 ${elapsed(Date.now()-w.waitSince)}</div>
+        ${w.time?`<span style="font-size:11px;color:#64748b;font-weight:600">${w.time}</span>`:''}
+      </div>
+      ${w.memo?`<div style="font-size:11px;color:#94a3b8;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📝 ${w.memo}</div>`:''}
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// 달력 렌더
+// ═══════════════════════════════════════════════════
+function renderCalendar() {
+  const label = document.getElementById('cal-month-label');
+  label.textContent = `${calYear}년 ${calMonth+1}월`;
+
+  const grid  = document.getElementById('cal-grid');
+  const first = new Date(calYear, calMonth, 1).getDay();
+  const days  = new Date(calYear, calMonth+1, 0).getDate();
+  const today = todayStr();
+
+  // 예약 있는 날 집합
+  const hasDots = new Set(
+    state.reservations.filter(r=>r.date && r.status!=='cancelled')
+      .map(r=>r.date).filter(d=>d.startsWith(`${calYear}-${pad(calMonth+1)}`))
+  );
+
+  let html = '';
+  for (let i=0; i<first; i++) html += '<div class="cal-day other"></div>';
+  for (let d=1; d<=days; d++) {
+    const str = `${calYear}-${pad(calMonth+1)}-${pad(d)}`;
+    const dow = (first+d-1)%7;
+    const isToday    = str===today;
+    const isSelected = str===calSelected;
+    const hasDot     = hasDots.has(str);
+    const cls = ['cal-day', dow===0?'sun':dow===6?'sat':'', isToday&&!isSelected?'today':'', isSelected?'selected':''].filter(Boolean).join(' ');
+    html += `<div class="${cls}" onclick="selectCalDay('${str}')">${d}${hasDot?'<div class="cal-dot"></div>':''}</div>`;
+  }
+  grid.innerHTML = html;
+}
+
+function calPrev() { calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); renderReserveList(); }
+function calNext() { calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); renderReserveList(); }
+function selectCalDay(str) { calSelected = calSelected===str ? null : str; renderCalendar(); renderReserveList(); }
+
+// ═══════════════════════════════════════════════════
+// 예약 관리 뷰
+// ═══════════════════════════════════════════════════
+function renderReserveView() {
+  renderCalendar();
+  renderReserveList();
+}
+
+function renderReserveList() {
+  const search = (document.getElementById('rv-search')?.value || '').trim().toLowerCase();
+  const title  = document.getElementById('rv-list-title');
+  const countEl= document.getElementById('rv-list-count');
+  const list   = document.getElementById('rv-list');
+
+  let filtered = state.reservations.filter(r => r.status !== 'cancelled');
+
+  // 날짜 필터
+  if (calSelected) {
+    filtered = filtered.filter(r => r.date === calSelected);
+    title.textContent = dateLabel(calSelected) + ' 예약';
+  } else {
+    title.textContent = '전체 예약';
+  }
+
+  // 검색 필터
+  if (search) {
+    filtered = filtered.filter(r =>
+      (r.name||'').toLowerCase().includes(search) ||
+      (r.phone||'').includes(search)
+    );
+  }
+
+  // 날짜·시간순 정렬
+  filtered.sort((a,b) => {
+    const da = (a.date||'9999') + (a.time||'99:99');
+    const db = (b.date||'9999') + (b.time||'99:99');
+    return da < db ? -1 : 1;
+  });
+
+  countEl.textContent = `${filtered.length}건`;
+
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty-msg" style="padding:28px">예약 없음</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(r => {
+    const statusMap = {
+      confirmed: ['#10b981','#ecfdf5','확정'],
+      pending:   ['#f59e0b','#fffbeb','대기'],
+      arrived:   ['#3b82f6','#eff6ff','방문'],
+      noshow:    ['#ef4444','#fef2f2','노쇼'],
+    };
+    const [sc,sbg,sl] = statusMap[r.status||'confirmed'] || statusMap.confirmed;
+    const dateStr = r.date ? `${dateLabel(r.date)} ` : '';
+    return `
+      <div class="rv-item" onclick="openReservationDetail(${r.id})">
+        <div class="rv-time-badge">${r.time||'--:--'}</div>
+        <div class="rv-item-body">
+          <div class="rv-item-name">${r.name}</div>
+          <div class="rv-item-sub">${dateStr}${r.guests}명${r.phone?' · '+r.phone:''}</div>
+          ${r.memo?`<div class="rv-item-memo">📝 ${r.memo}</div>`:''}
+        </div>
+        <div class="rv-status-badge" style="color:${sc};background:${sbg}">${sl}</div>
+      </div>`;
+  }).join('');
+}
+
+// ── 예약 추가 모달 ────────────────────────────
+function openAddReservation(prefillDate) {
+  const df = prefillDate || calSelected || todayStr();
+  const btns = [1,2,3,4,5,6,7,8].map(n=>
+    `<button class="guest-btn ${n===2?'active-green':''}" onclick="setRvGuest(${n})">${n}</button>`
+  ).join('');
+  showModal(`<div class="modal modal-lg" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <span class="modal-title">예약 추가</span>
+      <button class="modal-close" onclick="forceCloseModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group">
+          <label class="form-label">예약자 이름 *</label>
+          <input class="form-input" id="rv-name" placeholder="홍길동">
+        </div>
+        <div class="form-group">
+          <label class="form-label">연락처</label>
+          <input class="form-input" id="rv-phone" type="tel" placeholder="010-0000-0000">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group">
+          <label class="form-label">날짜 *</label>
+          <input class="form-input" id="rv-date" type="date" value="${df}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">시간 *</label>
+          <input class="form-input" id="rv-time" type="time" value="18:00">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">인원</label>
+        <div class="guest-btns" id="rv-guest-btns">${btns}</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">메모 / 특이사항</label>
+        <textarea class="form-input" id="rv-memo" placeholder="알레르기, 특별 요청 등…"></textarea>
+
+```
+  </div>
+  <div class="form-group">
+    <label class="form-label">상태</label>
+    <select class="form-input" id="rv-status">
+      <option value="confirmed">확정</option>
+      <option value="pending">대기</option>
+    </select>
+  </div>
+  <button class="action-btn" style="background:#10b981;width:100%" onclick="submitAddReservation()">예약 등록</button>
+</div>
+```
+
+  </div>`);
+}
+
+let _rvGuests = 2;
+function setRvGuest(n) {
+_rvGuests = n;
+document.getElementById(‘rv-guest-btns’).querySelectorAll(’.guest-btn’).forEach((b,i)=>{
+b.className = ‘guest-btn’ + ((i+1)===n?’ active-green’:’’);
+});
+}
+
+function submitAddReservation() {
+const name  = document.getElementById(‘rv-name’)?.value.trim();
+const phone = document.getElementById(‘rv-phone’)?.value.trim();
+const date  = document.getElementById(‘rv-date’)?.value;
+const time  = document.getElementById(‘rv-time’)?.value;
+const memo  = document.getElementById(‘rv-memo’)?.value.trim();
+const status= document.getElementById(‘rv-status’)?.value || ‘confirmed’;
+if (!name || !date || !time) { alert(‘이름, 날짜, 시간은 필수입니다’); return; }
+state.reservations.push({ id:Date.now(), name, phone, date, time, guests:_rvGuests, memo, status, createdAt:Date.now() });
+forceCloseModal();
+saveState();
+renderReserveView();
+}
+
+// ── 예약 상세 모달 ────────────────────────────
+function openReservationDetail(id) {
+const r = state.reservations.find(x=>x.id===id);
+if (!r) return;
+const statusMap = { confirmed:‘확정’, pending:‘대기’, arrived:‘방문’, noshow:‘노쇼’, cancelled:‘취소’ };
+showModal(`<div class="modal modal-lg" onclick="event.stopPropagation()"> <div class="modal-head"> <span class="modal-title">${r.name} 예약</span> <button class="modal-close" onclick="forceCloseModal()">×</button> </div> <div class="info-box" style="background:#f8fafc;border-color:#e2e8f0;margin-bottom:12px"> <div class="info-row"><span class="info-label">날짜</span><span class="info-value">${dateLabel(r.date)}</span></div> <div class="info-row"><span class="info-label">시간</span><span class="info-value">${r.time}</span></div> <div class="info-row"><span class="info-label">인원</span><span class="info-value">${r.guests}명</span></div> ${r.phone?`<div class="info-row"><span class="info-label">연락처</span><span class="info-value"><a href="tel:${r.phone}" style="color:#3b82f6;text-decoration:none">${r.phone}</a></span></div>`:''} ${r.memo?`<div class="info-row"><span class="info-label">메모</span><span class="info-value" style="max-width:180px;text-align:right">${r.memo}</span></div>`:’’}
+<div class="info-row"><span class="info-label">상태</span><span class="info-value">${statusMap[r.status]||r.status}</span></div>
+</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+<button onclick="setRvStatus(${id},'arrived')"  style="flex:1;padding:10px 0;border:none;border-radius:10px;background:#eff6ff;color:#3b82f6;font-weight:700;font-size:13px;cursor:pointer">방문</button>
+<button onclick="setRvStatus(${id},'confirmed')" style="flex:1;padding:10px 0;border:none;border-radius:10px;background:#ecfdf5;color:#10b981;font-weight:700;font-size:13px;cursor:pointer">확정</button>
+<button onclick="setRvStatus(${id},'noshow')"   style="flex:1;padding:10px 0;border:none;border-radius:10px;background:#fef2f2;color:#ef4444;font-weight:700;font-size:13px;cursor:pointer">노쇼</button>
+</div>
+<div style="display:flex;gap:8px">
+<button class="action-btn" style="background:#6366f1" onclick="forceCloseModal();openEditReservation(${id})">✏️ 수정</button>
+<button class="action-btn" style="background:#ef4444" onclick="cancelReservation(${id})">취소</button>
+</div>
+
+  </div>`);
+}
+
+function setRvStatus(id, status) {
+state.reservations = state.reservations.map(r => r.id===id ? {…r, status} : r);
+saveState();
+forceCloseModal();
+renderReserveView();
+}
+
+function cancelReservation(id) {
+if (!confirm(‘예약을 취소하시겠어요?’)) return;
+state.reservations = state.reservations.filter(r => r.id!==id);
+saveState();
+forceCloseModal();
+renderReserveView();
+}
+
+// ── 예약 수정 모달 ────────────────────────────
+function openEditReservation(id) {
+const r = state.reservations.find(x=>x.id===id);
+if (!r) return;
+_rvGuests = r.guests || 2;
+const btns = [1,2,3,4,5,6,7,8].map(n=>
+`<button class="guest-btn ${n===_rvGuests?'active-green':''}" onclick="setRvGuest(${n})">${n}</button>`
+).join(’’);
+showModal(`<div class="modal modal-lg" onclick="event.stopPropagation()"> <div class="modal-head"> <span class="modal-title">예약 수정</span> <button class="modal-close" onclick="forceCloseModal()">×</button> </div> <div class="modal-body"> <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"> <div class="form-group"><label class="form-label">이름 *</label><input class="form-input" id="ev-name" value="${r.name||''}"></div> <div class="form-group"><label class="form-label">연락처</label><input class="form-input" id="ev-phone" type="tel" value="${r.phone||''}"></div> </div> <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"> <div class="form-group"><label class="form-label">날짜 *</label><input class="form-input" id="ev-date" type="date" value="${r.date||''}"></div> <div class="form-group"><label class="form-label">시간 *</label><input class="form-input" id="ev-time" type="time" value="${r.time||''}"></div> </div> <div class="form-group"><label class="form-label">인원</label><div class="guest-btns" id="rv-guest-btns">${btns}</div></div> <div class="form-group"><label class="form-label">메모</label><textarea class="form-input" id="ev-memo">${r.memo||''}</textarea></div> <div class="form-group"> <label class="form-label">상태</label> <select class="form-input" id="ev-status"> ${['confirmed','pending','arrived','noshow'].map(s=>`<option value=”${s}” ${r.status===s?‘selected’:’’}>${{confirmed:‘확정’,pending:‘대기’,arrived:‘방문’,noshow:‘노쇼’}[s]}</option>`).join(’’)}
+</select>
+</div>
+<button class="action-btn" style="background:#10b981;width:100%" onclick="submitEditReservation(${id})">저장</button>
+</div>
+
+  </div>`);
+}
+
+function submitEditReservation(id) {
+const name  = document.getElementById(‘ev-name’)?.value.trim();
+const phone = document.getElementById(‘ev-phone’)?.value.trim();
+const date  = document.getElementById(‘ev-date’)?.value;
+const time  = document.getElementById(‘ev-time’)?.value;
+const memo  = document.getElementById(‘ev-memo’)?.value.trim();
+const status= document.getElementById(‘ev-status’)?.value;
+if (!name||!date||!time) { alert(‘이름, 날짜, 시간은 필수입니다’); return; }
+state.reservations = state.reservations.map(r => r.id===id ? {…r,name,phone,date,time,guests:_rvGuests,memo,status} : r);
+forceCloseModal();
+saveState();
+renderReserveView();
+}
+
+// ═══════════════════════════════════════════════════
+// 홀 테이블 모달 (기존)
+// ═══════════════════════════════════════════════════
+let _guestCount = 2;
+
+function openTableModal(tableId) {
+if (editMode) return;
+const t = state.tables.find(x=>x.id===tableId);
+if (!t) return;
+_guestCount = t.guests || 2;
+if (t.status===‘occupied’)      showOccupiedModal(t);
+else if (t.status===‘reserved’) showReservedModal(t);
+else                             showEmptyModal(t);
+}
+
+function showEmptyModal(t) {
+const btns = Array.from({length:t.capacity},(_,i)=>i+1)
+.map(n=>`<button class="guest-btn ${n===_guestCount?'active-blue':''}" onclick="setGuest(${n},${t.id})">${n}</button>`).join(’’);
+showModal(`<div class="modal" onclick="event.stopPropagation()">
+<div class="modal-head"><span class="modal-title">${t.name} — 착석</span><button class="modal-close" onclick="forceCloseModal()">×</button></div>
+<p style="font-size:13px;color:#64748b;margin-bottom:11px">인원을 선택하세요</p>
+<div class="guest-btns" id="guest-btns-${t.id}" style="margin-bottom:16px">${btns}</div>
+<div class="action-btns">
+<button class="action-btn" style="background:#3b82f6" onclick="seatTable(${t.id})">착석</button>
+<button class="action-btn" style="background:#8b5cf6" onclick="forceCloseModal();openReserveModal(${t.id})">예약 등록</button>
+</div>
+
+  </div>`);
+}
+
+function setGuest(n, tableId) {
+_guestCount = n;
+document.getElementById(`guest-btns-${tableId}`)?.querySelectorAll(’.guest-btn’).forEach((b,i)=>{
+b.className=‘guest-btn’+(((i+1)===n)?’ active-blue’:’’);
+});
+}
+
+function seatTable(tableId) {
+state.tables = state.tables.map(t=>t.id===tableId?{…t,status:‘occupied’,guests:_guestCount,seatTime:Date.now()}:t);
+forceCloseModal(); saveState(); render();
+}
+
+function showOccupiedModal(t) {
+const col=getColors(t.status,t.seatTime), e=Date.now()-t.seatTime;
+showModal(`<div class="modal" onclick="event.stopPropagation()">
+<div class="modal-head"><span class="modal-title">${t.name} — 착석중</span><button class="modal-close" onclick="forceCloseModal()">×</button></div>
+<div class="info-box" style="background:${col.bg};border-color:${col.border}">
+<div class="info-row"><span class="info-label">착석 인원</span><span class="info-value">${t.guests}명</span></div>
+<div class="info-row"><span class="info-label">착석 시간</span><span class="info-value">${fmtTime(t.seatTime)}</span></div>
+<div class="info-row"><span class="info-label">경과</span><span class="info-value" style="color:${e>5400000?'#ef4444':'#1e293b'}">${elapsed(e)}</span></div>
+</div>
+<button class="action-btn" style="background:#ef4444;width:100%" onclick="clearTable(${t.id})">퇴석 처리</button>
+
+  </div>`);
+}
+
+function clearTable(tableId) {
+state.tables=state.tables.map(t=>t.id===tableId?{…t,status:‘empty’,guests:0,seatTime:null,reservation:null}:t);
+forceCloseModal(); saveState(); render();
+}
+
+function showReservedModal(t) {
+const r=t.reservation||{};
+showModal(`<div class="modal" onclick="event.stopPropagation()"> <div class="modal-head"><span class="modal-title">${t.name} — 예약</span><button class="modal-close" onclick="forceCloseModal()">×</button></div> <div class="info-box" style="background:#eff6ff;border-color:#bfdbfe"> <div class="info-row"><span class="info-label">예약자</span><span class="info-value">${r.name||''}</span></div> <div class="info-row"><span class="info-label">인원</span><span class="info-value">${r.guests||''}명</span></div> <div class="info-row"><span class="info-label">예약 시간</span><span class="info-value">${r.time||''}</span></div> ${r.phone?`<div class="info-row"><span class="info-label">연락처</span><span class="info-value"><a href="tel:${r.phone}" style="color:#3b82f6;text-decoration:none">${r.phone}</a></span></div>`:''} ${r.memo?`<div class="info-row"><span class="info-label">메모</span><span class="info-value" style="max-width:180px;text-align:right">${r.memo}</span></div>`:’’}
+</div>
+<div class="action-btns">
+<button class="action-btn" style="background:#3b82f6" onclick="seatFromReservation(${t.id})">착석 처리</button>
+<button class="action-btn" style="background:#ef4444" onclick="clearTable(${t.id})">예약 취소</button>
+</div>
+
+  </div>`);
+}
+
+function seatFromReservation(tableId) {
+const t=state.tables.find(x=>x.id===tableId);
+state.tables=state.tables.map(x=>x.id===tableId?{…x,status:‘occupied’,seatTime:Date.now(),guests:t.reservation?.guests||t.capacity,reservation:null}:x);
+forceCloseModal(); saveState(); render();
+}
+
+// 테이블 예약 등록 (홀 현황에서)
+let _resForm={name:’’,guests:2,phone:’’,time:’’,memo:’’}, _resTableId=null;
+function openReserveModal(tableId) {
+_resTableId=tableId; *resForm={name:’’,guests:2,phone:’’,time:’’,memo:’’};
+const t=state.tables.find(x=>x.id===tableId);
+const btns=Array.from({length:t.capacity},(*,i)=>i+1)
+.map(n=>`<button class="guest-btn ${n===2?'active-purple':''}" onclick="setResGuest(${n},${tableId})">${n}</button>`).join(’’);
+showModal(`<div class="modal" onclick="event.stopPropagation()">
+<div class="modal-head"><span class="modal-title">${t.name} 예약 등록</span><button class="modal-close" onclick="forceCloseModal()">×</button></div>
+<div class="modal-body">
+<div class="form-group"><label class="form-label">예약자 이름</label><input class="form-input" id="res-name" placeholder="고객 이름"></div>
+<div class="form-group"><label class="form-label">인원</label><div class="guest-btns" id="res-guest-btns-${tableId}">${btns}</div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<div class="form-group"><label class="form-label">예약 시간</label><input class="form-input" id="res-time" type="time" value="18:00"></div>
+<div class="form-group"><label class="form-label">연락처 (선택)</label><input class="form-input" id="res-phone" type="tel" placeholder="010-0000-0000"></div>
+</div>
+<div class="form-group"><label class="form-label">메모 (선택)</label><textarea class="form-input" id="res-memo" placeholder="알레르기, 특별 요청 등…"></textarea></div>
+<button class="action-btn" style="background:#8b5cf6;width:100%" onclick="submitReservation()">예약 등록</button>
+</div>
+
+  </div>`);
+}
+function setResGuest(n,tableId) {
+  _resForm.guests=n;
+  document.getElementById(`res-guest-btns-${tableId}`)?.querySelectorAll('.guest-btn').forEach((b,i)=>{b.className='guest-btn'+(((i+1)===n)?' active-purple':'');});
+}
+function submitReservation() {
+  _resForm.name =document.getElementById('res-name')?.value||'';
+  _resForm.time =document.getElementById('res-time')?.value||'';
+  _resForm.phone=document.getElementById('res-phone')?.value||'';
+  _resForm.memo =document.getElementById('res-memo')?.value||'';
+  if (!_resForm.name||!_resForm.time){alert('이름과 시간을 입력하세요');return;}
+  state.tables=state.tables.map(t=>t.id===_resTableId?{...t,status:'reserved',reservation:{..._resForm}}:t);
+  forceCloseModal(); saveState(); render();
+}
+
+// ── 대기자 모달 ───────────────────────────────
+let _waitForm={name:’’,guests:2,phone:’’,time:’’,memo:’’};
+function openWaitModal() {
+_waitForm={name:’’,guests:2,phone:’’,time:’’,memo:’’};
+const btns=[1,2,3,4,5,6].map(n=>`<button class="guest-btn ${n===2?'active-blue':''}" onclick="setWaitGuest(${n})">${n}</button>`).join(’’);
+const now=new Date(); const nowTime=`${pad(now.getHours())}:${pad(now.getMinutes())}`;
+showModal(`<div class="modal" onclick="event.stopPropagation()">
+<div class="modal-head"><span class="modal-title">대기자 추가</span><button class="modal-close" onclick="forceCloseModal()">×</button></div>
+<div class="modal-body">
+<div class="form-group"><label class="form-label">이름</label><input class="form-input" id="wait-name" placeholder="고객 이름"></div>
+<div class="form-group"><label class="form-label">인원</label><div class="guest-btns" id="wait-guest-btns">${btns}</div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<div class="form-group"><label class="form-label">연락처 (선택)</label><input class="form-input" id="wait-phone" type="tel" placeholder="010-0000-0000"></div>
+<div class="form-group"><label class="form-label">접수 시간</label><input class="form-input" id="wait-time" type="time" value="${nowTime}"></div>
+</div>
+<div class="form-group"><label class="form-label">메모 (선택)</label><textarea class="form-input" id="wait-memo" placeholder="특이사항, 요청사항…"></textarea></div>
+<button class="action-btn" style="background:#3b82f6;width:100%" onclick="submitWaiter()">대기 등록</button>
+</div>
+
+  </div>`);
+}
+function setWaitGuest(n) {
+  _waitForm.guests=n;
+  document.getElementById('wait-guest-btns')?.querySelectorAll('.guest-btn').forEach((b,i)=>{b.className='guest-btn'+(((i+1)===n)?' active-blue':'');});
+}
+function submitWaiter() {
+  _waitForm.name =document.getElementById('wait-name')?.value||'';
+  _waitForm.phone=document.getElementById('wait-phone')?.value||'';
+  _waitForm.time =document.getElementById('wait-time')?.value||'';
+  _waitForm.memo =document.getElementById('wait-memo')?.value||'';
+  if(!_waitForm.name){alert('이름을 입력하세요');return;}
+  state.waitlist.push({id:Date.now(),..._waitForm,waitSince:Date.now()});
+  forceCloseModal(); saveState(); render();
+}
+function openSeatWaiterModal(waitId) {
+  const w=state.waitlist.find(x=>x.id===waitId); if(!w)return;
+  const available=state.tables.filter(t=>t.status==='empty'&&t.capacity>=w.guests);
+  const tlist=available.length
+    ? available.map(t=>`<button class="table-pick-btn" onclick="seatWaiter(${waitId},${t.id})"><span>${t.name}</span><span class="table-pick-sub">${t.type}·${t.capacity}인</span></button>`).join('')
+    : '<p style="color:#94a3b8;font-size:13px;text-align:center;padding:12px 0">적합한 빈 테이블 없음</p>';
+  showModal(`<div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head"><span class="modal-title">${w.name} (${w.guests}명) 착석</span><button class="modal-close" onclick="forceCloseModal()">×</button></div>
+    <div class="info-box" style="background:#f8fafc;border-color:#e2e8f0;margin-bottom:12px">
+      <div class="info-row"><span class="info-label">대기 경과</span><span class="info-value">${elapsed(Date.now()-w.waitSince)}</span></div>
+      ${w.time?`<div class="info-row"><span class="info-label">접수 시간</span><span class="info-value">${w.time}</span></div>`:''}
+      ${w.phone?`<div class="info-row"><span class="info-label">연락처</span><span class="info-value"><a href="tel:${w.phone}" style="color:#3b82f6;text-decoration:none">${w.phone}</a></span></div>`:''}
+      ${w.memo?`<div class="info-row"><span class="info-label">메모</span><span class="info-value" style="max-width:180px;text-align:right">${w.memo}</span></div>`:''}
+    </div>
+    <p style="font-size:13px;color:#64748b;margin-bottom:11px">착석할 테이블을 선택하세요</p>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:11px">${tlist}</div>
+    <button class="action-btn" style="background:#ef4444;width:100%" onclick="removeWaiter(${waitId})">대기자 삭제</button>
+  </div>`);
+}
+function seatWaiter(waitId,tableId) {
+  const w=state.waitlist.find(x=>x.id===waitId);
+  state.tables=state.tables.map(t=>t.id===tableId?{...t,status:'occupied',guests:w.guests,seatTime:Date.now()}:t);
+  state.waitlist=state.waitlist.filter(x=>x.id!==waitId);
+  forceCloseModal(); saveState(); render();
+}
+function removeWaiter(waitId) {
+  state.waitlist=state.waitlist.filter(x=>x.id!==waitId);
+  forceCloseModal(); saveState(); render();
+}
+
+// ── 초기화 ────────────────────────────────────
+function confirmReset() {
+showModal(`<div class="modal" onclick="event.stopPropagation()">
+<div class="modal-head"><span class="modal-title">전체 초기화</span><button class="modal-close" onclick="forceCloseModal()">×</button></div>
+<p style="font-size:14px;color:#64748b;margin-bottom:16px;line-height:1.7">모든 착석·대기 정보가 삭제됩니다.<br>예약 목록과 배치는 유지됩니다.</p>
+<div class="action-btns">
+<button class="action-btn" style="background:#94a3b8" onclick="forceCloseModal()">취소</button>
+<button class="action-btn" style="background:#ef4444" onclick="doReset()">초기화</button>
+</div>
+
+  </div>`);
+}
+function doReset() {
+  state.tables=state.tables.map(t=>({...t,status:'empty',guests:0,seatTime:null,reservation:null}));
+  state.waitlist=[];
+  forceCloseModal(); saveState(); render();
+}
+
+// ── 모달 공통 ─────────────────────────────────
+function showModal(html) { document.getElementById(‘modal-root’).innerHTML=`<div class="overlay" onclick="closeModal(event)">${html}</div>`; }
+function closeModal(e)   { if(e&&e.target!==e.currentTarget)return; forceCloseModal(); }
+function forceCloseModal(){ document.getElementById(‘modal-root’).innerHTML=’’; }
+
+// ═══════════════════════════════════════════════════
+// 부트
+// ═══════════════════════════════════════════════════
+loadState();
+render();
+
+setInterval(()=>{ if(currentTab===‘floor’){renderCanvas();renderWaitlist();renderStats();renderHeader();} }, 1000);
+window.addEventListener(‘resize’, ()=>render());
+document.addEventListener(‘visibilitychange’, ()=>{ if(document.hidden) localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); });
+</script>
+
+</body>
+</html>
