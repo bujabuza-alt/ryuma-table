@@ -231,15 +231,15 @@ textarea.fi { resize: none; min-height: 60px; }
 <script>
 var SK = 'tv5';
 var IT = [
-  {id:1,n:'1번',t:'4인',c:4,px:2, py:3 },
-  {id:2,n:'2번',t:'4인',c:4,px:35,py:3 },
-  {id:3,n:'3번',t:'4인',c:4,px:68,py:3 },
-  {id:4,n:'4번',t:'4인',c:4,px:68,py:36},
-  {id:5,n:'5번',t:'4인',c:4,px:68,py:62},
-  {id:6,n:'6번',t:'2인',c:2,px:68,py:84},
-  {id:7,n:'바1', t:'바', c:2,px:2, py:37},
-  {id:8,n:'바2', t:'바', c:2,px:2, py:58},
-  {id:9,n:'바3', t:'바', c:2,px:2, py:79}
+  {id:1,n:"1번",t:"4인",c:4,px:2,py:3},
+  {id:2,n:"2번",t:"4인",c:4,px:35,py:3},
+  {id:3,n:"3번",t:"4인",c:4,px:68,py:3},
+  {id:4,n:"4번",t:"4인",c:4,px:68,py:36},
+  {id:5,n:"5번",t:"4인",c:4,px:68,py:62},
+  {id:6,n:"6번",t:"2인",c:2,px:68,py:84},
+  {id:7,n:"바1",t:"바",c:2,px:2,py:37},
+  {id:8,n:"바2",t:"바",c:2,px:2,py:58},
+  {id:9,n:"바3",t:"바",c:2,px:2,py:79}
 ];
 function ft(t){ return {id:t.id,n:t.n,t:t.t,c:t.c,px:t.px,py:t.py,st:'empty',g:0,seatTime:null,res:null}; }
 
@@ -295,8 +295,8 @@ function col(st,st2){
   return {bg:'#fef2f2',bd:'#dc2626',tx:'#7f1d1d'};
 }
 function csz(t,W,H){
-  if(t==='바')  return {w:Math.round(W*.28),h:Math.round(H*.115)};
-  if(t==='2인') return {w:Math.round(W*.28),h:Math.round(H*.19)};
+  if(t==="바")  return {w:Math.round(W*.28),h:Math.round(H*.115)};
+  if(t==="2인") return {w:Math.round(W*.28),h:Math.round(H*.19)};
   return              {w:Math.round(W*.28),h:Math.round(H*.21)};
 }
 
@@ -348,20 +348,20 @@ function rCanvas(){
       inner.appendChild(card);
       bindCard(card, tb.id);
     }
-    card.className = 'tc'+(tb.t==='바'?' bar':'')+(card.classList.contains('drag')?' drag':'');
+    card.className = 'tc'+(tb.t==="바"?' bar':'')+(card.classList.contains('drag')?' drag':'');
     var c=col(tb.st,tb.seatTime), sz=csz(tb.t,W,H);
     var x=Math.round(tb.px/100*W), y=Math.round(tb.py/100*H);
     card.style.left=x+'px'; card.style.top=y+'px';
     card.style.width=sz.w+'px'; card.style.height=sz.h+'px';
     card.style.background=c.bg; card.style.borderColor=c.bd;
-    card.style.padding=tb.t==='바'?'7px 9px':'10px 10px 8px';
+    card.style.padding=tb.t==="바"?'7px 9px':'10px 10px 8px';
     card.style.cursor=editMode?'grab':'pointer';
     card.style.boxShadow=editMode?'0 0 0 2px #6366f144':'';
 
     var dot=tb.st==='occupied'?'#22c55e':tb.st==='reserved'?'#3b82f6':'#d1d5db';
     var dshadow=tb.st!=='empty'?'0 0 0 3px '+dot+'33':'none';
     var now=Date.now();
-    if(tb.t==='바'){
+    if(tb.t==="바"){
       card.innerHTML='<div><div style="font-weight:800;font-size:12px">'+tb.n+'</div><div style="font-size:10px;color:#94a3b8">바·2인</div></div>'
         +'<div style="text-align:right">'
         +(tb.st==='occupied'?'<div style="font-size:11px;color:'+c.tx+';font-weight:700">'+tb.g+'명</div><div style="font-size:10px;color:'+c.tx+'">'+el(now-tb.seatTime)+'</div>'
@@ -423,7 +423,7 @@ function moveDrag(cx,cy,card,tid){
   if(!drect) return;
   var p=document.getElementById('cv'), W=p.offsetWidth, H=p.offsetHeight;
   var tb=S.tables.filter(function(t){return t.id===tid;})[0];
-  var sz=csz(tb?tb.t:'4인',W,H);
+  var sz=csz(tb?tb.t:"4인",W,H);
   var nx=cx-drect.left-doff.x, ny=cy-drect.top-doff.y;
   nx=Math.max(0,Math.min(W-sz.w,nx)); ny=Math.max(0,Math.min(H-sz.h,ny));
   card.style.left=nx+'px'; card.style.top=ny+'px';
