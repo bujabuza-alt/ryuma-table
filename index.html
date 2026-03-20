@@ -154,6 +154,15 @@ textarea.fi { resize: none; min-height: 80px; }
   #stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .sc { min-width: 0; }
 }
+  /* 연락처 010 고정 입력 폼 디자인 */
+.prefix-input { display: flex; align-items: center; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 10px; overflow: hidden; padding-left: 14px; }
+.prefix-input span { font-weight: 700; color: #64748b; font-size: 15px; flex-shrink: 0; }
+.prefix-input input { border: none; outline: none; padding: 12px 14px 12px 8px; flex: 1; font-size: 15px; background: transparent; color: #1e293b; width: 100%; }
+.prefix-input:focus-within { border-color: #3b82f6; }
+
+/* 큰 모달(예약/대기) 너비 확장 */
+.md-lg { max-width: 520px !important; }
+
 </style>
 </head>
 <body>
