@@ -132,10 +132,34 @@ textarea.fi{resize:none;min-height:60px}
 .tpb.has-rv{border-color:#6366f1;background:#f5f3ff}
 .tps{color:#94a3b8;font-size:12px;font-weight:500}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.ed-add-btn{position:absolute;bottom:10px;right:10px;z-index:10;background:#6366f1;color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:22px;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(99,102,241,.4);-webkit-appearance:none}
-#cv.em .ed-add-btn{display:flex}
-.del-btn{position:absolute;top:-1px;right:-1px;width:18px;height:18px;background:#ef4444;border:none;border-radius:0 8px 0 6px;color:#fff;font-size:12px;line-height:1;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:20;-webkit-appearance:none}
+/* ── 삭제 버튼 (편집 모드 카드 위) ── */
+.del-btn{position:absolute;top:-1px;right:-1px;width:20px;height:20px;background:#ef4444;border:none;border-radius:0 8px 0 7px;color:#fff;font-size:13px;line-height:1;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:20;font-weight:900;-webkit-appearance:none}
 #cv.em .del-btn{display:flex}
+/* ── 편집 패널 (배치 모드 전용) ── */
+#ed-panel{display:none;margin-top:10px;background:#fff;border-radius:14px;border:2px solid #c7d2fe;overflow:hidden}
+#ed-panel.on{display:block}
+#ed-panel.on{display:block}
+.edp-tabs{display:flex;border-bottom:1px solid #e0e7ff}
+.edp-tab{flex:1;padding:10px 0;border:none;background:none;font-size:13px;font-weight:700;color:#94a3b8;cursor:pointer;-webkit-appearance:none;border-bottom:2px solid transparent;margin-bottom:-1px}
+.edp-tab.on{color:#6366f1;border-bottom-color:#6366f1;background:#faf5ff}
+.edp-body{padding:12px}
+/* 추가 패널 */
+#edp-add{display:block}
+#edp-del{display:none}
+.edp-add-row{display:flex;gap:8px;align-items:flex-end}
+.edp-type-btns{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.edp-type-btn{padding:5px 10px;border-radius:7px;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none}
+.edp-type-btn.on{border-color:#6366f1;background:#eef2ff;color:#6366f1}
+.edp-name-input{flex:1;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;-webkit-appearance:none;font-family:inherit;background:#fff;color:#1e293b}
+.edp-name-input:focus{border-color:#6366f1}
+.edp-add-confirm{padding:8px 14px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;-webkit-appearance:none;flex-shrink:0}
+/* 삭제 패널 */
+.edp-tbl-list{display:flex;flex-direction:column;gap:5px;max-height:180px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.edp-tbl-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0}
+.edp-tbl-name{font-size:13px;font-weight:700}
+.edp-tbl-type{font-size:11px;color:#94a3b8;margin-left:6px}
+.edp-tbl-st{font-size:10px;font-weight:700;border-radius:4px;padding:2px 6px}
+.edp-del-btn{padding:5px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none}
 </style>
 </head>
 <body>
@@ -190,7 +214,30 @@ textarea.fi{resize:none;min-height:60px}
         <div id="cv">
           <div id="edbanner">✏️ 카드를 길게 눌러 드래그 · 완료 후 [저장]</div>
           <div id="cvi"></div>
-          <button class="ed-add-btn" id="btn-add-table">+</button>
+        </div>
+        <!-- 편집 패널: 배치 모드에서만 표시 -->
+        <div id="ed-panel">
+          <div class="edp-tabs">
+            <button class="edp-tab on" id="edp-tab-add" type="button">＋ 테이블 추가</button>
+            <button class="edp-tab"    id="edp-tab-del" type="button">✕ 테이블 제거</button>
+          </div>
+          <div class="edp-body">
+            <div id="edp-add">
+              <div class="edp-type-btns" id="edp-type-btns">
+                <button class="edp-type-btn" data-tp="2인" data-cap="2" type="button">2인</button>
+                <button class="edp-type-btn on" data-tp="4인" data-cap="4" type="button">4인</button>
+                <button class="edp-type-btn" data-tp="6인" data-cap="6" type="button">6인</button>
+                <button class="edp-type-btn" data-tp="바" data-cap="2" type="button">바</button>
+              </div>
+              <div class="edp-add-row">
+                <input class="edp-name-input" id="edp-name" placeholder="이름 (예: 10번, VIP)" autocomplete="off" autocorrect="off">
+                <button class="edp-add-confirm" id="edp-add-btn" type="button">추가</button>
+              </div>
+            </div>
+            <div id="edp-del">
+              <div class="edp-tbl-list" id="edp-tbl-list"></div>
+            </div>
+          </div>
         </div>
         <div id="stats">
           <div class="sc"><div class="si" style="background:#3b82f615">👥</div><div><div class="sl">착석 인원</div><div class="sv" id="s1" style="color:#3b82f6">0명</div></div></div>
@@ -406,7 +453,19 @@ function renderCanvas(){
     var rb=card.querySelector('[data-resid]');
     if(rb)rb.addEventListener('click',function(e){e.stopPropagation();openResModal(+this.getAttribute('data-resid'));});
     var db=card.querySelector('[data-delid]');
-    if(db)db.addEventListener('click',function(e){e.stopPropagation();confirmDeleteTable(+this.getAttribute('data-delid'));});
+    if(db)db.addEventListener('click',function(e){
+      e.stopPropagation();
+      var tid=+this.getAttribute('data-delid');
+      var tb=S.tables.filter(function(t){return t.id===tid;})[0];
+      if(!tb)return;
+      if(tb.st!=='empty'&&!confirm(tb.n+' 삭제? 현재 사용 중입니다.'))return;
+      S.tables=S.tables.filter(function(t){return t.id!==tid;});
+      var card2=document.getElementById('tc'+tid);
+      if(card2&&card2.parentNode)card2.parentNode.removeChild(card2);
+      delete cardCache[tid];
+      saveData();renderCanvas();renderHeader();renderStats();
+      if(editMode)renderEdDelList();
+    });
   });
   inner.querySelectorAll('.tc').forEach(function(el){
     var id=+el.id.replace('tc','');
@@ -455,40 +514,66 @@ function snapCard(tid){
   S.tables=S.tables.map(function(t){return t.id===tid?Object.assign({},t,{px:bx/W*100,py:by/H*100}):t;});
 }
 function toggleEdit(){
-  editMode=!editMode;var btn=document.getElementById('bedit'),cv=document.getElementById('cv'),hint=document.getElementById('ehint');
+  editMode=!editMode;
+  var btn=document.getElementById('bedit'),cv=document.getElementById('cv'),hint=document.getElementById('ehint');
+  var panel=document.getElementById('ed-panel');
   S.tables.forEach(function(t){cardCache[t.id]='';});
-  if(editMode){btn.textContent='✅저장';btn.classList.add('on');cv.classList.add('em');hint.textContent='길게 누르고 드래그';}
-  else{btn.textContent='✏️배치';btn.classList.remove('on');cv.classList.remove('em');hint.textContent='';saveData();}
+  if(editMode){
+    btn.textContent='✅저장';btn.classList.add('on');
+    cv.classList.add('em');hint.textContent='길게 눌러 드래그';
+    panel.classList.add('on');
+    renderEdPanel('add'); // 기본 추가 탭
+  }else{
+    btn.textContent='✏️배치';btn.classList.remove('on');
+    cv.classList.remove('em');hint.textContent='';
+    panel.classList.remove('on');
+    document.getElementById('edp-name').value='';
+    saveData();
+  }
   renderCanvas();
 }
 
-function openAddTableModal(){
-  var types=['2인','4인','6인','바'],gvT=1;
-  showModal('<div class="md-hd"><span class="md-title">테이블 추가</span><button class="md-x" id="mxbtn">×</button></div>'
-    +'<div class="mb"><div class="fg"><label class="fl">테이블 이름</label><input class="fi" id="tn-input" placeholder="예: 10번, VIP" autocomplete="off" autocorrect="off"></div>'
-    +'<div class="fg"><label class="fl">종류</label><div style="display:flex;gap:8px">'
-    +types.map(function(tp,i){return'<button class="gb'+(i===1?' bl':'')+'" data-ti="'+i+'" type="button">'+tp+'</button>';}).join('')
-    +'</div></div>'
-    +'<button class="ab" style="background:#6366f1;width:100%;margin-top:4px" id="tn-submit" type="button">추가</button></div>');
-  var capMap={'2인':2,'4인':4,'6인':6,'바':2};
-  document.getElementById('mdc').querySelectorAll('[data-ti]').forEach(function(btn){
-    btn.addEventListener('click',function(){gvT=+this.getAttribute('data-ti');
-      document.getElementById('mdc').querySelectorAll('[data-ti]').forEach(function(b){b.className='gb';});this.className='gb bl';});
-  });
-  document.getElementById('tn-submit').addEventListener('click',function(){
-    var nm=document.getElementById('tn-input').value.trim();if(!nm){alert('이름을 입력하세요');return;}
-    var tp=types[gvT],cap=capMap[tp];
-    var newTb={id:nextTableId++,n:nm,t:tp,c:cap,px:10,py:40};
-    S.tables.push(makeTable(newTb));cardCache[newTb.id]='';closeModal();saveData();renderCanvas();
+// ── 편집 패널 탭 전환 ────────────────────────────────────
+function renderEdPanel(tab){
+  document.getElementById('edp-tab-add').className='edp-tab'+(tab==='add'?' on':'');
+  document.getElementById('edp-tab-del').className='edp-tab'+(tab==='del'?' on':'');
+  document.getElementById('edp-add').style.display=tab==='add'?'block':'none';
+  document.getElementById('edp-del').style.display=tab==='del'?'block':'none';
+  if(tab==='del') renderEdDelList();
+}
+function renderEdDelList(){
+  var container=document.getElementById('edp-tbl-list');
+  if(!S.tables.length){container.innerHTML='<p style="text-align:center;color:#94a3b8;font-size:12px;padding:16px 0">테이블 없음</p>';return;}
+  var stLabel={empty:'빈',occupied:'착석',reserved:'예약'};
+  var stColor={empty:'#10b981',occupied:'#f59e0b',reserved:'#3b82f6'};
+  container.innerHTML=S.tables.map(function(tb){
+    return'<div class="edp-tbl-item">'
+      +'<div style="display:flex;align-items:center">'
+      +'<span class="edp-tbl-name">'+esc(tb.n)+'</span>'
+      +'<span class="edp-tbl-type">'+esc(tb.t)+'</span>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:6px">'
+      +'<span class="edp-tbl-st" style="background:'+(stColor[tb.st]||'#94a3b8')+'22;color:'+(stColor[tb.st]||'#94a3b8')+'">'+stLabel[tb.st]+'</span>'
+      +'<button class="edp-del-btn" data-delid="'+tb.id+'" type="button">삭제</button>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+  container.querySelectorAll('.edp-del-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var tid=+this.getAttribute('data-delid');
+      var tb=S.tables.filter(function(t){return t.id===tid;})[0];
+      if(!tb)return;
+      if(tb.st!=='empty'&&!confirm(tb.n+' 삭제? 현재 사용 중입니다.'))return;
+      S.tables=S.tables.filter(function(t){return t.id!==tid;});
+      var card=document.getElementById('tc'+tid);
+      if(card&&card.parentNode)card.parentNode.removeChild(card);
+      delete cardCache[tid];
+      saveData();renderCanvas();renderHeader();renderStats();renderEdDelList();
+    });
   });
 }
-function confirmDeleteTable(tid){
-  var tb=S.tables.filter(function(t){return t.id===tid;})[0];if(!tb)return;
-  if(!confirm(tb.n+' 테이블을 삭제할까요?'))return;
-  S.tables=S.tables.filter(function(t){return t.id!==tid;});
-  var card=document.getElementById('tc'+tid);if(card&&card.parentNode)card.parentNode.removeChild(card);
-  delete cardCache[tid];saveData();renderCanvas();renderHeader();renderStats();
-}
+
+// openAddTableModal/confirmDeleteTable → 인라인 패널로 대체됨 (하단 이벤트 바인딩 참조)
 
 function renderWaitList(){
   var container=document.getElementById('wl');
@@ -824,12 +909,40 @@ document.getElementById('bedit').addEventListener('click',toggleEdit);
 document.getElementById('breset').addEventListener('click',confirmReset);
 document.getElementById('bwait').addEventListener('click',openWaitModal);
 document.getElementById('baddRv').addEventListener('click',openAddRv);
-document.getElementById('btn-add-table').addEventListener('click',function(e){e.stopPropagation();openAddTableModal();});
+// 테이블 추가/삭제 → 인라인 편집 패널로 이동
 document.getElementById('bcalp').addEventListener('click',function(){calM--;if(calM<0){calM=11;calY--;}renderCal();renderRvList();});
 document.getElementById('bcaln').addEventListener('click',function(){calM++;if(calM>11){calM=0;calY++;}renderCal();renderRvList();});
 document.getElementById('rvsrch').addEventListener('input',renderRvList);
 document.getElementById('mo').addEventListener('click',function(e){if(e.target===this)closeModal();});
 document.getElementById('mo').addEventListener('touchend',function(e){if(e.target===this){e.preventDefault();closeModal();}},{passive:false});
+
+// ── 편집 패널 이벤트 바인딩 ────────────────────────────────
+(function(){
+  var selTp='4인',selCap=4;
+  // 탭 전환
+  document.getElementById('edp-tab-add').addEventListener('click',function(){renderEdPanel('add');});
+  document.getElementById('edp-tab-del').addEventListener('click',function(){renderEdPanel('del');});
+  // 타입 버튼
+  document.getElementById('edp-type-btns').querySelectorAll('.edp-type-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      document.getElementById('edp-type-btns').querySelectorAll('.edp-type-btn').forEach(function(b){b.classList.remove('on');});
+      this.classList.add('on');selTp=this.getAttribute('data-tp');selCap=+this.getAttribute('data-cap');
+    });
+  });
+  // 추가 버튼
+  document.getElementById('edp-add-btn').addEventListener('click',function(){
+    var nm=document.getElementById('edp-name').value.trim();
+    if(!nm){document.getElementById('edp-name').focus();return;}
+    var newTb={id:nextTableId++,n:nm,t:selTp,c:selCap,px:10,py:40};
+    S.tables.push(makeTable(newTb));cardCache[newTb.id]='';
+    document.getElementById('edp-name').value='';
+    saveData();renderCanvas();
+  });
+  // Enter 키 지원
+  document.getElementById('edp-name').addEventListener('keydown',function(e){
+    if(e.key==='Enter'){e.preventDefault();document.getElementById('edp-add-btn').click();}
+  });
+})();
 
 loadData();
 if(!S.tables.length)S.tables=INIT_TABLES.map(makeTable);
