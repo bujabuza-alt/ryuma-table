@@ -765,7 +765,7 @@ function renderSidebar() {
   var rvList = S.ress.filter(function(r){
     return r.date===td && r.st!=='cancelled' && r.st!=='noshow' && r.st!=='completed';
   }).sort(function(a,b){ return (a.time||'')<(b.time||'')?-1:1; });
-  html += '<div class="sb-sec"><span class="sb-sec-t">TODAY</span><span class="sb-sec-c">'+rvList.length+'건</span></div>';
+  html += '<div class="sb-sec"><span class="sb-sec-t">오늘 예약</span><span class="sb-sec-c">'+rvList.length+'건</span></div>';
   if (rvList.length) {
     rvList.forEach(function(r) {
       var tbl = r.tableId ? S.tables.filter(function(t){ return t.id===r.tableId; })[0] : null;
@@ -783,7 +783,7 @@ function renderSidebar() {
   var walkins = (S.daily||[]).filter(function(d){ return d.date===td; });
   var rvDone  = S.ress.filter(function(r){ return r.st==='completed' && r.date===td; });
   var doneTotal = walkins.length + rvDone.length;
-  html += '<div class="sb-sec"><span class="sb-sec-t">DONE</span><span class="sb-sec-c">'+doneTotal+'팀</span></div>';
+  html += '<div class="sb-sec"><span class="sb-sec-t">완료</span><span class="sb-sec-c">'+doneTotal+'팀</span></div>';
   if (doneTotal) {
     var items = [];
     walkins.forEach(function(d){ items.push({isRes:false,name:d.tname,g:d.g,sub:fmtTime(d.seatTime)+'→'+fmtTime(d.endTime),k:d.endTime}); });
@@ -797,7 +797,7 @@ function renderSidebar() {
     });
   } else { html += '<div class="sb-empty">완료 없음</div>'; }
 
-  html += '<div class="sb-sec"><span class="sb-sec-t">WAIT</span><span class="sb-sec-c">'+S.waits.length+'팀</span></div>';
+  html += '<div class="sb-sec"><span class="sb-sec-t">대기 목록</span><span class="sb-sec-c">'+S.waits.length+'팀</span></div>';
   if (S.waits.length) {
     S.waits.forEach(function(w,i) {
       html += '<div class="wi" data-wid="'+esc(String(w.id))+'">'
