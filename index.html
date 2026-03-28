@@ -1758,8 +1758,7 @@ function parseNaverScreenshot(base64, mediaType) {
     + '{\n'
     + '  "nm": "예약자명 (문자열)",\n'
     + '  "phone": "전화번호, 010-XXXX-XXXX 형식으로 변환. 없으면 빈 문자열",\n'
-    + '  "resNo": "예약번호 (문자열, 없으면 빈 문자열)",\n'
-    + '  "product": "상품명 (예: 바(BAR) 자리 예약, 없으면 빈 문자열)",\n'
+    + '  "product": "상품명 (예: 홀 테이블 예약, 없으면 빈 문자열)",\n'
     + '  "date": "이용날짜 YYYY-MM-DD 형식",\n'
     + '  "time": "이용시간 HH:MM 형식 (24시간제)",\n'
     + '  "g": 인원수 숫자,\n'
@@ -1808,10 +1807,7 @@ function confirmNaverImport(p) {
   var d = p.date || today();
   var t = p.time || '18:00';
   var g = +(p.g) || 2;
-  var memoParts = [];
-  if (p.resNo) memoParts.push('예약번호: ' + p.resNo);
-  if (p.product) memoParts.push(p.product);
-  var memo = memoParts.join(' / ');
+  var memo = '';
 
   showModal(
     '<div class="md-hd"><span class="md-title">가져오기 확인</span><button class="md-x" id="mxbtn">×</button></div>'
