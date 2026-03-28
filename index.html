@@ -185,6 +185,8 @@ body{font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;background:var(-
 .rvi-st{font-size:11px;font-weight:700;border-radius:5px;padding:2px 6px;flex-shrink:0;}
 .rvi-tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;}
 .rvi-tag{font-size:10px;padding:1px 6px;border-radius:99px;background:rgba(196,18,48,.1);color:var(--red);font-weight:700;}
+.rvi.past{opacity:.5;}
+.rv-sec-lbl{padding:6px 13px 5px;font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;background:var(--bg);border-bottom:1px solid var(--border);}
 
 /* 모달 */
 #mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;align-items:center;justify-content:center;padding:16px;overflow-y:auto;}
@@ -355,7 +357,7 @@ textarea.fi{resize:none;min-height:60px;}
         <div class="cal-g" id="calg"></div>
       </div>
       <div id="rvw">
-        <div class="rvw-hd"><span class="rvw-title" id="rvtitle">전체 예약</span><span style="font-size:11px;color:var(--text3)" id="rvcnt"></span></div>
+        <div class="rvw-hd"><span class="rvw-title" id="rvtitle">전체 예약</span><div style="display:flex;align-items:center;gap:6px"><button id="rvsort" style="font-size:10px;padding:3px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--surf2);color:var(--text2);cursor:pointer;font-family:inherit;font-weight:700">↑ 날짜순</button><span style="font-size:11px;color:var(--text3)" id="rvcnt"></span></div></div>
         <div id="rvlist"></div>
       </div>
     </div>
@@ -401,6 +403,7 @@ var S = {tables:[],waits:[],ress:[],tags:[],daily:[]};
 var DEFAULT_TAGS = ['생일','기념일','데이트','VIP','단체','비즈니스'];
 var currentTab='floor', editMode=false, saveTimer=null;
 var calY=new Date().getFullYear(), calM=new Date().getMonth(), calSel=null;
+var rvSortAsc=true;
 var gvFloor=2, gvWait=2, gvRes=2, gvRvAdd=2, gvRvEdit=2;
 var activeResTableId=null;
 var dragOffset={x:0,y:0}, dragPanelRect=null;
@@ -707,8 +710,14 @@ function mkTable(t) {
   var cap   = t.c || (shape==='wide'?6:shape==='bar'?2:4);
   return {id:t.id, n:t.n, shape:shape, sz:sz, c:cap, px:t.px, py:t.py, st:'empty', g:0, seatTime:null, res:null};
 }
-function tblColor(st, seatTime) {
+function isSlaveTbl(tid) {
+  return S.tables.some(function(t){ return t.mergeIds && t.mergeIds.indexOf(tid) >= 0; });
+}
+function tblColor(st, seatTime, merged) {
   var isLight = document.body.classList.contains('light');
+  if (st==='empty' && merged) return isLight
+    ? {bg:'rgba(90,82,200,.07)', bd:'rgba(90,82,200,.45)', tx:'#4840b0'}
+    : {bg:'rgba(90,82,200,.14)', bd:'var(--indigo)',       tx:'#a78bfa'};
   if (st==='empty')    return isLight
     ? {bg:'#f5f3f0', bd:'#d8d2c8', tx:'#a09880'}
     : {bg:'#1c1a18', bd:'#3a3835', tx:'#5a5248'};
@@ -846,7 +855,8 @@ function renderCanvas() {
       card = document.createElement('div'); card.id = 'tc'+tb.id;
       inner.appendChild(card); bindCard(card, tb.id); cardCache[tb.id]='';
     }
-    var c  = tblColor(tb.st, tb.seatTime);
+    var isMerged = !!(tb.mergeIds && tb.mergeIds.length) || isSlaveTbl(tb.id);
+    var c  = tblColor(tb.st, tb.seatTime, isMerged);
     var sz = cardSz(tb.shape||'sq', tb.sz||'m', W, H);
     var x  = Math.max(0, Math.min(W-sz.w, Math.round(tb.px/100*W)));
     var y  = Math.max(0, Math.min(H-sz.h, Math.round(tb.py/100*H)));
@@ -859,10 +869,10 @@ function renderCanvas() {
     var wasDrag = card.classList.contains('drag');
     card.className = 'tc' + (wasDrag?' drag':'');
     var isLightMode = document.body.classList.contains('light');
-    var dot = tb.st==='occupied'?'#2a9a5a':tb.st==='reserved'?'var(--blue)':(isLightMode?'#c8c0b0':'#3a3835');
+    var dot = tb.st==='occupied'?'#2a9a5a':tb.st==='reserved'?'var(--blue)':(isMerged?'var(--indigo)':(isLightMode?'#c8c0b0':'#3a3835'));
     var elMin = tb.st==='occupied'?Math.floor((now-tb.seatTime)/60000):0;
     var key = tb.st+'|'+tb.g+'|'+(tb.seatTime||0)+'|'+elMin+'|'+(tb.res?JSON.stringify(tb.res):'')+
-              '|'+editMode+'|'+tb.shape+'|'+tb.sz;
+              '|'+editMode+'|'+tb.shape+'|'+tb.sz+'|'+(isMerged?1:0);
     if (cardCache[tb.id]===key) return;
     cardCache[tb.id]=key;
     var html='';
@@ -1022,7 +1032,8 @@ function renderListView(){
   var shapeLabel={'sq':'정방형','wide':'가로형','bar':'바형'};
   var html='';
   S.tables.forEach(function(tb){
-    var c=tblColor(tb.st,tb.seatTime);
+    var isMerged = !!(tb.mergeIds && tb.mergeIds.length) || isSlaveTbl(tb.id);
+    var c=tblColor(tb.st,tb.seatTime,isMerged);
     var statusHtml='', subHtml='', timeHtml='';
     var barColor=c.bd;
     if(tb.st==='occupied'){
@@ -1034,9 +1045,9 @@ function renderListView(){
       subHtml=esc(tb.res&&tb.res.name||'')+(tb.res&&tb.res.g?' · '+tb.res.g+'명':'');
       timeHtml='<div style="font-weight:800;font-size:14px;color:var(--blue)">'+esc(tb.res&&tb.res.time||'')+'</div>';
     } else {
-      statusHtml='<div class="lv-status" style="color:var(--text3)">빈 테이블</div>';
+      statusHtml='<div class="lv-status" style="color:'+(isMerged?'#a78bfa':'var(--text3)')+'">빈 테이블'+(isMerged?' · 🔗묶음':'')+'</div>';
       subHtml=({sq:'정방형',wide:'가로형',bar:'바형'}[tb.shape]||'')+' · '+tb.c+'인';
-      barColor='var(--border2)';
+      barColor=isMerged?'var(--indigo)':c.bd;
     }
     html+='<div class="lv-item" data-tid="'+tb.id+'">'
       +'<div class="lv-bar" style="background:'+barColor+'"></div>'
@@ -1388,29 +1399,50 @@ function renderCal(){
     el.addEventListener('click',function(){var d=this.getAttribute('data-d');if(!d)return;calSel=(calSel===d)?null:d;renderCal();renderRvList();});
   });
 }
+function rvItemHtml(r,sm,isPast){
+  var s=sm[r.st||'confirmed']||sm.confirmed;
+  var tbl=r.tableId?S.tables.filter(function(t){return t.id===r.tableId;})[0]:null;
+  return '<div class="rvi'+(isPast?' past':'')+'" data-rid="'+esc(String(r.id))+'">'
+    +'<div class="rvi-t">'+esc(r.time||'–')+'</div>'
+    +'<div class="rvi-b"><div class="rvi-n">'+esc(r.nm)+'</div>'
+    +'<div class="rvi-s">'+(r.date?dlabel(r.date)+' ':'')+r.g+'명'+(r.phone?' · '+esc(r.phone):'')
+    +(tbl?' · <span style="color:var(--blue)">🪑'+esc(tbl.n)+'</span>':'')+'</div>'
+    +(r.tags&&r.tags.length?'<div class="rvi-tags">'+r.tags.map(function(t){return'<span class="rvi-tag">'+esc(t)+'</span>';}).join('')+'</div>':'')
+    +(r.memo?'<div class="rvi-m">📝'+esc(r.memo)+'</div>':'')
+    +'</div><div class="rvi-st" style="color:'+s[0]+';background:'+s[1]+'">'+s[2]+'</div></div>';
+}
 function renderRvList(){
   var q=(document.getElementById('rvsrch').value||'').trim().toLowerCase();
   var list=S.ress.filter(function(r){return r.st!=='cancelled';});
   if(calSel) list=list.filter(function(r){return r.date===calSel;});
   if(q) list=list.filter(function(r){return (r.nm||'').toLowerCase().indexOf(q)>=0||(r.phone||'').indexOf(q)>=0;});
-  list.sort(function(a,b){return ((a.date||'9999')+(a.time||'99:99'))<((b.date||'9999')+(b.time||'99:99'))?-1:1;});
+  list.sort(function(a,b){
+    var ka=(a.date||'9999')+(a.time||'99:99'), kb=(b.date||'9999')+(b.time||'99:99');
+    return rvSortAsc?(ka<kb?-1:1):(ka>kb?-1:1);
+  });
   document.getElementById('rvtitle').textContent=calSel?dlabel(calSel)+' 예약':'전체 예약';
   document.getElementById('rvcnt').textContent=list.length+'건';
+  var sortBtn=document.getElementById('rvsort');
+  if(sortBtn) sortBtn.textContent=rvSortAsc?'↑ 날짜순':'↓ 날짜순';
   var sm={confirmed:['#2a9a5a','rgba(42,154,90,.12)','확정'],pending:['var(--amber)','rgba(200,146,42,.1)','대기'],
           arrived:['var(--blue)','rgba(42,114,200,.1)','방문'],noshow:['var(--red2)','rgba(196,18,48,.1)','노쇼'],completed:['var(--indigo)','rgba(90,82,200,.1)','완료']};
-  var html=list.length?'':'<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">예약 없음</div>';
-  list.forEach(function(r){
-    var s=sm[r.st||'confirmed']||sm.confirmed;
-    var tbl=r.tableId?S.tables.filter(function(t){return t.id===r.tableId;})[0]:null;
-    html+='<div class="rvi" data-rid="'+esc(String(r.id))+'">'
-      +'<div class="rvi-t">'+esc(r.time||'–')+'</div>'
-      +'<div class="rvi-b"><div class="rvi-n">'+esc(r.nm)+'</div>'
-      +'<div class="rvi-s">'+(r.date?dlabel(r.date)+' ':'')+r.g+'명'+(r.phone?' · '+esc(r.phone):'')
-      +(tbl?' · <span style="color:var(--blue)">🪑'+esc(tbl.n)+'</span>':'')+'</div>'
-      +(r.tags&&r.tags.length?'<div class="rvi-tags">'+r.tags.map(function(t){return'<span class="rvi-tag">'+esc(t)+'</span>';}).join('')+'</div>':'')
-      +(r.memo?'<div class="rvi-m">📝'+esc(r.memo)+'</div>':'')
-      +'</div><div class="rvi-st" style="color:'+s[0]+';background:'+s[1]+'">'+s[2]+'</div></div>';
-  });
+  var nd=today(), showSections=!calSel&&!q;
+  var html='';
+  if(showSections){
+    var upcoming=list.filter(function(r){return r.date>=nd;});
+    var past=list.filter(function(r){return r.date<nd;});
+    if(rvSortAsc){
+      if(past.length) html+='<div class="rv-sec-lbl">지난 예약 '+past.length+'건</div>'+past.map(function(r){return rvItemHtml(r,sm,true);}).join('');
+      if(upcoming.length) html+='<div class="rv-sec-lbl">예정 예약 '+upcoming.length+'건</div>'+upcoming.map(function(r){return rvItemHtml(r,sm,false);}).join('');
+    } else {
+      if(upcoming.length) html+='<div class="rv-sec-lbl">예정 예약 '+upcoming.length+'건</div>'+upcoming.map(function(r){return rvItemHtml(r,sm,false);}).join('');
+      if(past.length) html+='<div class="rv-sec-lbl">지난 예약 '+past.length+'건</div>'+past.map(function(r){return rvItemHtml(r,sm,true);}).join('');
+    }
+    if(!html) html='<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">예약 없음</div>';
+  } else {
+    html=list.length?'':'<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">예약 없음</div>';
+    list.forEach(function(r){html+=rvItemHtml(r,sm,!calSel&&r.date<nd);});
+  }
   document.getElementById('rvlist').innerHTML=html;
   document.getElementById('rvlist').querySelectorAll('.rvi').forEach(function(el){
     el.addEventListener('click',function(){openRvDetail(this.getAttribute('data-rid'));});
@@ -1727,6 +1759,7 @@ document.getElementById('btn-cfg').addEventListener('click', openCfg);
 document.getElementById('bcalp').addEventListener('click', function(){ calM--; if(calM<0){calM=11;calY--;} renderCal(); renderRvList(); });
 document.getElementById('bcaln').addEventListener('click', function(){ calM++; if(calM>11){calM=0;calY++;} renderCal(); renderRvList(); });
 document.getElementById('rvsrch').addEventListener('input', renderRvList);
+document.getElementById('rvsort').addEventListener('click', function(){ rvSortAsc=!rvSortAsc; renderRvList(); });
 document.getElementById('mo').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
 document.getElementById('mo').addEventListener('touchend', function(e){ if(e.target===this) closeModal(); });
 
