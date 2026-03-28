@@ -2078,6 +2078,25 @@ try {
   }
 } catch(e) {}
 
+// ── NFC URL 파라미터 처리 ──
+// 사용법: ?action=reserve  (예약 추가 모달 자동 오픈)
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var action = params.get('action');
+  if (!action) return;
+  // 앱 로딩 완료 후 실행
+  function runNfcAction() {
+    if (!currentStore) { setTimeout(runNfcAction, 300); return; }
+    if (action === 'reserve') {
+      switchTab('reserve');
+      setTimeout(openAddRv, 200);
+    }
+    // URL 파라미터 정리 (뒤로가기 시 재실행 방지)
+    history.replaceState(null, '', window.location.pathname);
+  }
+  setTimeout(runNfcAction, 500);
+})();
+
 initTheme();
 document.getElementById('sel-logo').src = LOGO_DATA;
 document.getElementById('hd-logo').src  = LOGO_DATA;
