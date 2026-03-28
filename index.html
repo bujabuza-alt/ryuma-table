@@ -632,10 +632,10 @@ function openCfg() {
     '노션에 백업하기</button>' +
     '<div id="backup-status" style="font-size:11px;text-align:center;min-height:16px;margin-top:4px"></div>' +
     '<div class="divider"></div>' +
-    '<div class="ss-label">Claude API (네이버 예약 가져오기)</div>' +
-    '<div style="font-size:11px;color:var(--text2);margin-bottom:8px">스크린샷으로 예약 정보를 자동 파싱합니다</div>' +
-    '<button class="ab" style="background:var(--indigo);width:100%" id="btn-claude-key">🔑 API 키 ' + (localStorage.getItem('ryuma_claude_key') ? '변경' : '설정') + '</button>' +
-    '<div id="claude-key-status" style="font-size:11px;text-align:center;min-height:14px;margin-top:4px;color:var(--green)">' + (localStorage.getItem('ryuma_claude_key') ? '✓ 설정됨' : '') + '</div>' +
+    '<div class="ss-label">Gemini API (네이버 예약 가져오기)</div>' +
+    '<div style="font-size:11px;color:var(--text2);margin-bottom:8px">스크린샷으로 예약 정보를 자동 파싱합니다 (무료)</div>' +
+    '<button class="ab" style="background:var(--indigo);width:100%" id="btn-gemini-key">🔑 API 키 ' + (localStorage.getItem('ryuma_gemini_key') ? '변경' : '설정') + '</button>' +
+    '<div id="gemini-key-status" style="font-size:11px;text-align:center;min-height:14px;margin-top:4px;color:var(--green)">' + (localStorage.getItem('ryuma_gemini_key') ? '✓ 설정됨' : '') + '</div>' +
     '<div class="divider"></div>' +
     '<button class="ab" style="background:var(--surf3);color:var(--text2);width:100%" id="btn-out">← 매장 선택으로</button>' +
     '</div>'
@@ -656,8 +656,8 @@ function openCfg() {
   document.getElementById('btn-backup').addEventListener('click', function() {
     runNotionBackup();
   });
-  document.getElementById('btn-claude-key').addEventListener('click', function() {
-    closeModal(); setTimeout(openClaudeKeyInput, 150);
+  document.getElementById('btn-gemini-key').addEventListener('click', function() {
+    closeModal(); setTimeout(openGeminiKeyInput, 150);
   });
   document.getElementById('btn-out').addEventListener('click', function() {
     closeModal(); setTimeout(logout, 150);
@@ -1655,38 +1655,39 @@ function getPh(id){ var el=document.getElementById(id); if(!el||!el.value.replac
 function tagHtml(pid,sel){ return '<div class="tag-picker" id="'+pid+'">'+S.tags.map(function(t){var on=(sel||[]).indexOf(t)>=0;return'<button type="button" class="tag-pill'+(on?' on':'')+'" data-tag="'+esc(t)+'">'+esc(t)+'</button>';}).join('')+'<button type="button" class="tag-add-btn" id="'+pid+'_mgr">⚙ 태그</button></div>'; }
 function bindTag(pid){ var c=document.getElementById(pid); if(!c)return; c.querySelectorAll('.tag-pill').forEach(function(btn){btn.addEventListener('click',function(){this.classList.toggle('on');});}); var m=document.getElementById(pid+'_mgr'); if(m)m.addEventListener('click',openTagMgr); }
 function getTags(pid){ var c=document.getElementById(pid); if(!c)return[]; var r=[]; c.querySelectorAll('.tag-pill.on').forEach(function(b){r.push(b.getAttribute('data-tag'));}); return r; }
-// ── 네이버 예약 가져오기 (Claude Vision API) ──
-function getClaudeKey() {
-  return localStorage.getItem('ryuma_claude_key') || '';
+// ── 네이버 예약 가져오기 (Gemini Vision API) ──
+function getGeminiKey() {
+  return localStorage.getItem('ryuma_gemini_key') || '';
 }
 
-function openClaudeKeyInput(cb) {
-  var cur = getClaudeKey();
+function openGeminiKeyInput(cb) {
+  var cur = getGeminiKey();
   showModal(
-    '<div class="md-hd"><span class="md-title">Claude API 키 설정</span><button class="md-x" id="mxbtn">×</button></div>'
+    '<div class="md-hd"><span class="md-title">Gemini API 키 설정</span><button class="md-x" id="mxbtn">×</button></div>'
     +'<div class="mb">'
     +'<div style="font-size:12px;color:var(--text2);line-height:1.8;margin-bottom:10px">'
-    +'① <a href="https://console.anthropic.com" target="_blank" style="color:var(--blue)">console.anthropic.com</a> 접속<br>'
-    +'② API Keys → Create Key<br>'
-    +'③ 생성된 키 복사 (sk-ant-...)'
+    +'① <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--blue)">aistudio.google.com/apikey</a> 접속<br>'
+    +'② <b>Create API key</b> 클릭<br>'
+    +'③ 생성된 키 복사 (AIza...)<br>'
+    +'<span style="color:var(--green);font-weight:700">✓ 무료 플랜: 하루 1,500회 사용 가능</span>'
     +'</div>'
     +'<div class="fg"><label class="fl">API Key</label>'
-    +'<input class="fi" id="claude-key-input" type="password" placeholder="sk-ant-..." value="'+esc(cur)+'" style="font-size:12px;letter-spacing:.04em"></div>'
-    +'<button class="ab" style="background:var(--indigo);width:100%" id="claude-key-save">저장</button>'
+    +'<input class="fi" id="gemini-key-input" type="password" placeholder="AIza..." value="'+esc(cur)+'" style="font-size:12px;letter-spacing:.04em"></div>'
+    +'<button class="ab" style="background:var(--indigo);width:100%" id="gemini-key-save">저장</button>'
     +'</div>'
   );
-  document.getElementById('claude-key-save').addEventListener('click', function() {
-    var key = document.getElementById('claude-key-input').value.trim();
-    if (!key || !key.startsWith('sk-ant-')) { alert('올바른 키를 입력하세요 (sk-ant-로 시작)'); return; }
-    localStorage.setItem('ryuma_claude_key', key);
+  document.getElementById('gemini-key-save').addEventListener('click', function() {
+    var key = document.getElementById('gemini-key-input').value.trim();
+    if (!key || !key.startsWith('AIza')) { alert('올바른 키를 입력하세요 (AIza로 시작)'); return; }
+    localStorage.setItem('ryuma_gemini_key', key);
     closeModal();
     if (cb) setTimeout(cb, 200);
   });
 }
 
 function openNaverImport() {
-  var key = getClaudeKey();
-  if (!key) { openClaudeKeyInput(openNaverImport); return; }
+  var key = getGeminiKey();
+  if (!key) { openGeminiKeyInput(openNaverImport); return; }
 
   var imgData = null, imgMediaType = null;
 
@@ -1737,7 +1738,7 @@ function openNaverImport() {
   parseBtn.addEventListener('click', function() {
     if (!imgData) return;
     parseBtn.disabled = true;
-    status.textContent = 'Claude AI가 예약 정보를 분석 중입니다…';
+    status.textContent = 'Gemini AI가 예약 정보를 분석 중입니다…';
     status.style.color = 'var(--amber)';
     parseNaverScreenshot(imgData, imgMediaType).then(function(parsed) {
       closeModal();
@@ -1751,7 +1752,7 @@ function openNaverImport() {
 }
 
 function parseNaverScreenshot(base64, mediaType) {
-  var key = getClaudeKey();
+  var key = getGeminiKey();
   var prompt = '이 이미지는 네이버 스마트플레이스 예약 상세 페이지의 스크린샷입니다.\n'
     + '다음 예약 정보를 추출해서 JSON 객체만 반환하세요. 설명이나 마크다운 없이 JSON만 응답하세요:\n'
     + '{\n'
@@ -1766,38 +1767,36 @@ function parseNaverScreenshot(base64, mediaType) {
     + '}\n'
     + '값을 찾을 수 없으면 null 또는 빈 문자열로 처리하세요.';
 
-  return fetch('https://api.anthropic.com/v1/messages', {
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key;
+
+  return fetch(url, {
     method: 'POST',
-    headers: {
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
+    headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-opus-4-6',
-      max_tokens: 512,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: base64 } },
-          { type: 'text', text: prompt }
+      contents: [{
+        parts: [
+          { inline_data: { mime_type: mediaType || 'image/jpeg', data: base64 } },
+          { text: prompt }
         ]
-      }]
+      }],
+      generationConfig: { maxOutputTokens: 512, temperature: 0 }
     })
   }).then(function(res) {
     if (!res.ok) {
       return res.json().catch(function() { return {}; }).then(function(err) {
-        if (res.status === 401) {
-          localStorage.removeItem('ryuma_claude_key');
+        if (res.status === 400 || res.status === 403) {
+          localStorage.removeItem('ryuma_gemini_key');
           throw new Error('API 키가 유효하지 않습니다. 설정에서 다시 입력해주세요.');
         }
-        throw new Error((err.error && err.error.message) || ('오류 코드 ' + res.status));
+        var msg = err.error && err.error.message ? err.error.message : '오류 코드 ' + res.status;
+        throw new Error(msg);
       });
     }
     return res.json();
   }).then(function(data) {
-    var text = (data.content && data.content[0] && data.content[0].text) || '';
+    var text = (data.candidates && data.candidates[0] &&
+                data.candidates[0].content && data.candidates[0].content.parts &&
+                data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) || '';
     var match = text.match(/\{[\s\S]*\}/);
     if (!match) throw new Error('응답에서 예약 정보를 찾을 수 없습니다');
     return JSON.parse(match[0]);
