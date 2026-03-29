@@ -226,6 +226,21 @@ body{font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;background:var(-
 .ci-visit-date{color:var(--text2);font-weight:600;}
 .ci-visit-time{color:var(--text3);font-size:11px;}
 .ci-visit-tbl{color:var(--blue);font-weight:700;font-size:11px;}
+/* 손님 정보 탭 */
+#cust{flex:1;min-width:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px;display:none;flex-direction:column;gap:8px;}
+#cust.on{display:flex;}
+#custlist{display:flex;flex-direction:column;gap:6px;}
+.cust-card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:11px 13px;cursor:pointer;display:flex;align-items:center;gap:10px;}
+.cust-card:active{opacity:.85;}
+.cust-av{width:38px;height:38px;border-radius:50%;background:var(--blue);color:#fff;font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.cust-main{flex:1;min-width:0;}
+.cust-name{font-weight:800;font-size:14px;color:var(--text);}
+.cust-phone{font-size:11px;color:var(--text2);margin-top:1px;}
+.cust-meta{display:flex;gap:8px;margin-top:3px;flex-wrap:wrap;}
+.cust-meta-item{font-size:10px;color:var(--text3);}
+.cust-meta-item b{color:var(--text2);font-weight:700;}
+.cust-badge{background:rgba(42,114,200,.12);color:var(--blue);border-radius:99px;padding:3px 10px;font-size:12px;font-weight:800;flex-shrink:0;white-space:nowrap;}
+.cust-no-visit{color:var(--text3);font-size:10px;flex-shrink:0;}
 /* 모달 */
 #mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;align-items:center;justify-content:center;padding:16px;overflow-y:auto;}
 #mo.on{display:flex;}
@@ -364,6 +379,7 @@ textarea.fi{resize:none;min-height:60px;}
   <div id="tb">
     <button class="tab on" id="t1">🪑 홀 현황</button>
     <button class="tab" id="t2">📋 예약 관리</button>
+    <button class="tab" id="t3">👤 손님</button>
   </div>
   <div id="body">
     <div id="sb">
@@ -417,6 +433,18 @@ textarea.fi{resize:none;min-height:60px;}
           <div id="rv-past"></div>
         </div>
       </div>
+    </div>
+    <div id="cust">
+      <div class="rv-top">
+        <input class="rv-srch" id="custsrch" type="search" placeholder="이름, 연락처 검색…">
+        <select id="custsort" style="flex-shrink:0;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;background:var(--surf);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;outline:none">
+          <option value="visits">방문 많은 순</option>
+          <option value="recent">최근 방문 순</option>
+          <option value="name">이름순</option>
+        </select>
+        <button class="bg" id="btn-cust-notion" style="font-size:11px;padding:5px 9px;white-space:nowrap;flex-shrink:0">☁ 노션</button>
+      </div>
+      <div id="custlist"></div>
     </div>
   </div>
 </div>
@@ -663,10 +691,11 @@ function openCfg() {
     '<button class="ab" style="background:var(--indigo);width:100%" id="pw-chg">변경하기</button>' +
     '<div class="divider"></div>' +
     '<div class="ss-label">노션 백업</div>' +
-    '<div style="font-size:11px;color:var(--text2);margin-bottom:8px">예약 데이터를 노션 데이터베이스에 저장합니다</div>' +
-    '<button class="ab" style="background:#2e2e2e;width:100%;display:flex;align-items:center;justify-content:center;gap:7px" id="btn-backup">' +
-    '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M4 4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-6-4H4zm10 0v5h5M12 11v6M9 14l3 3 3-3"/></svg>' +
-    '노션에 백업하기</button>' +
+    '<div style="font-size:11px;color:var(--text2);margin-bottom:8px">예약·손님 데이터를 노션에 저장합니다</div>' +
+    '<div style="display:flex;gap:7px">' +
+    '<button class="ab" style="background:#2e2e2e;flex:1;display:flex;align-items:center;justify-content:center;gap:5px" id="btn-backup">📋 예약 백업</button>' +
+    '<button class="ab" style="background:#2e2e2e;flex:1;display:flex;align-items:center;justify-content:center;gap:5px" id="btn-cust-backup">👤 손님 백업</button>' +
+    '</div>' +
     '<div id="backup-status" style="font-size:11px;text-align:center;min-height:16px;margin-top:4px"></div>' +
     '<div class="divider"></div>' +
     '<div class="ss-label">Gemini API (네이버 예약 가져오기)</div>' +
@@ -692,6 +721,9 @@ function openCfg() {
   });
   document.getElementById('btn-backup').addEventListener('click', function() {
     runNotionBackup();
+  });
+  document.getElementById('btn-cust-backup').addEventListener('click', function() {
+    runNotionCustBackup('backup-status');
   });
   document.getElementById('btn-gemini-key').addEventListener('click', function() {
     closeModal(); setTimeout(openGeminiKeyInput, 150);
@@ -977,13 +1009,75 @@ function switchTab(t) {
   currentTab = t;
   document.getElementById('t1').className = 'tab' + (t==='floor'?' on':'');
   document.getElementById('t2').className = 'tab' + (t==='reserve'?' on':'');
+  document.getElementById('t3').className = 'tab' + (t==='cust'?' on':'');
   document.getElementById('sb').style.display   = t==='floor'?'flex':'none';
   document.getElementById('main').style.display = t==='floor'?'flex':'none';
   if (t==='reserve') document.getElementById('rv').classList.add('on');
   else document.getElementById('rv').classList.remove('on');
+  if (t==='cust') document.getElementById('cust').classList.add('on');
+  else document.getElementById('cust').classList.remove('on');
   document.getElementById('bedit').style.display = t==='floor'?'':'none';
   document.getElementById('btn-view').style.display = t==='floor'?'':'none';
-  if (t==='floor') renderAll(); else renderReservations();
+  if (t==='floor') renderAll();
+  else if (t==='reserve') renderReservations();
+  else if (t==='cust') renderCustTab();
+}
+function getAllCustomers() {
+  var map = {};
+  S.ress.forEach(function(r) {
+    if (!r.phone) return;
+    if (!map[r.phone]) map[r.phone] = {name:'', phone:r.phone, latestDate:'', visitDates:[], memo:''};
+    if ((r.date||'') >= map[r.phone].latestDate) {
+      map[r.phone].latestDate = r.date||'';
+      map[r.phone].name = r.nm||'';
+    }
+    if (r.st==='arrived' || r.st==='completed') map[r.phone].visitDates.push(r.date);
+  });
+  (S.customers||[]).forEach(function(c) {
+    if (!map[c.phone]) map[c.phone] = {name:c.name||'', phone:c.phone, latestDate:'', visitDates:[], memo:''};
+    map[c.phone].memo = c.memo||'';
+    if (!map[c.phone].name) map[c.phone].name = c.name||'';
+  });
+  return Object.keys(map).map(function(phone) {
+    var c = map[phone]; c.visitDates.sort();
+    c.total = c.visitDates.length;
+    c.first = c.visitDates.length ? c.visitDates[0] : null;
+    c.last  = c.visitDates.length ? c.visitDates[c.visitDates.length-1] : null;
+    return c;
+  });
+}
+function renderCustTab() {
+  var q = (document.getElementById('custsrch').value||'').trim().toLowerCase();
+  var sortBy = document.getElementById('custsort').value||'visits';
+  var custs = getAllCustomers();
+  if (q) custs = custs.filter(function(c){return (c.name||'').toLowerCase().indexOf(q)>=0||(c.phone||'').indexOf(q)>=0;});
+  custs.sort(function(a,b){
+    if (sortBy==='visits') return b.total - a.total;
+    if (sortBy==='recent') return (b.last||'')>(a.last||'')?1:(b.last||'')<(a.last||'')?-1:0;
+    return (a.name||'').localeCompare(b.name||'','ko');
+  });
+  var html='';
+  custs.forEach(function(c){
+    var av=(c.name||c.phone||'?').charAt(0);
+    html+='<div class="cust-card" data-phone="'+esc(c.phone)+'" data-name="'+esc(c.name||'')+'">'
+      +'<div class="cust-av">'+esc(av)+'</div>'
+      +'<div class="cust-main">'
+      +'<div class="cust-name">'+esc(c.name||c.phone)+'</div>'
+      +'<div class="cust-phone">'+esc(c.phone)+'</div>'
+      +'<div class="cust-meta">'
+      +(c.first?'<div class="cust-meta-item">첫 방문 <b>'+fmtDateShort(c.first)+'</b></div>':'')
+      +(c.last&&c.last!==c.first?'<div class="cust-meta-item">최근 <b>'+fmtDateShort(c.last)+'</b></div>':'')
+      +(c.memo?'<div class="cust-meta-item">📝 '+esc(c.memo.slice(0,24))+'</div>':'')
+      +'</div>'
+      +'</div>'
+      +(c.total>0?'<div class="cust-badge">'+c.total+'회</div>':'<div class="cust-no-visit">방문 없음</div>')
+      +'</div>';
+  });
+  if(!html) html='<div style="padding:32px;text-align:center;color:var(--text3);font-size:13px">손님 정보 없음</div>';
+  document.getElementById('custlist').innerHTML=html;
+  document.getElementById('custlist').querySelectorAll('.cust-card').forEach(function(el){
+    el.addEventListener('click',function(){openCustInfo(this.getAttribute('data-phone'),this.getAttribute('data-name'));});
+  });
 }
 
 // ── 캔버스 렌더 ──
@@ -2099,7 +2193,8 @@ function saveOneToNotion(r) {
 }
 
 // ── 노션 백업 (Notion API 직접 호출) ──
-var NOTION_DB_ID = '7562318a7b0b41b5aa3a9ec91cba2d85';
+var NOTION_DB_ID      = '7562318a7b0b41b5aa3a9ec91cba2d85';
+var NOTION_CUST_DB_ID = '1a94dd12ecb4805a98ddd72093c44909';
 
 function setBackupStatus(msg, color) {
   var el = document.getElementById('backup-status');
@@ -2203,6 +2298,58 @@ async function runNotionBackup() {
     setBackupStatus('⚠ ' + ok + '건 성공 / ' + fail + '건 실패', 'var(--red2)');
   }
 }
+async function runNotionCustBackup(statusElId) {
+  var token = getNotionToken();
+  if (!token) { openNotionTokenInput(); return; }
+  var custs = getAllCustomers();
+  if (!custs.length) {
+    if(statusElId){var el=document.getElementById(statusElId);if(el){el.textContent='백업할 손님 데이터 없음';el.style.color='var(--amber)';}} return;
+  }
+  var btn = document.getElementById('btn-cust-notion');
+  if (btn) { btn.disabled=true; btn.style.opacity='.6'; btn.textContent='백업 중…'; }
+  var stEl = statusElId ? document.getElementById(statusElId) : null;
+  if (stEl) { stEl.textContent='노션에 저장 중…'; stEl.style.color='var(--amber)'; }
+  var ok=0, fail=0;
+  var visitMap = {'0':'0','1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9'};
+  for (var i=0; i<custs.length; i++) {
+    var c = custs[i];
+    var vStr = c.total >= 10 ? '10이상' : (visitMap[String(c.total)] || '0');
+    var body = {
+      parent: { database_id: NOTION_CUST_DB_ID },
+      properties: {
+        '이름':     { title: [{ text: { content: c.name||c.phone||'(이름없음)' } }] },
+        '전화번호': { phone_number: c.phone || null },
+        '방문 횟수':{ select: { name: vStr } },
+        '특이사항': { rich_text: [{ text: { content: c.memo||'' } }] }
+      }
+    };
+    if (c.first) body.properties['첫 방문']     = { date: { start: c.first } };
+    if (c.last)  body.properties['마지막 방문'] = { date: { start: c.last  } };
+    try {
+      var res = await fetch('https://api.notion.com/v1/pages', {
+        method: 'POST',
+        headers: { 'Authorization':'Bearer '+token, 'Content-Type':'application/json', 'Notion-Version':'2022-06-28' },
+        body: JSON.stringify(body)
+      });
+      if (res.ok) { ok++; }
+      else {
+        var err = await res.json();
+        if (err.code==='unauthorized') {
+          if(btn){btn.disabled=false;btn.style.opacity='1';btn.textContent='☁ 노션';}
+          if(stEl){stEl.textContent='토큰 오류. 다시 설정해주세요';stEl.style.color='var(--red2)';}
+          localStorage.removeItem('ryuma_notion_token'); return;
+        }
+        fail++;
+      }
+    } catch(e) { fail++; }
+    if(stEl) stEl.textContent='저장 중… ('+(ok+fail)+'/'+custs.length+')';
+  }
+  if(btn){btn.disabled=false;btn.style.opacity='1';btn.textContent='☁ 노션';}
+  if(stEl){
+    stEl.textContent = fail===0 ? '✅ '+ok+'명 백업 완료!' : '⚠ '+ok+'명 성공 / '+fail+'명 실패';
+    stEl.style.color = fail===0 ? '#2a9a5a' : 'var(--red2)';
+  }
+}
 function openTagMgr(){
   function mkH(){ return '<div class="md-hd"><span class="md-title">태그 관리</span><button class="md-x" id="mxbtn">×</button></div><div class="mb"><div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px" id="tmlist">'+S.tags.map(function(t,i){return'<div style="display:flex;align-items:center;gap:3px;background:var(--surf3);border-radius:99px;padding:3px 6px 3px 11px"><span style="font-size:13px;font-weight:700;color:var(--text)">'+esc(t)+'</span><button type="button" style="border:none;background:none;color:var(--text3);font-size:14px;cursor:pointer;padding:0 3px;line-height:1" data-tidx="'+i+'">×</button></div>';}).join('')+'</div><div style="display:flex;gap:6px"><input class="fi" id="tmnew" placeholder="새 태그" style="flex:1"><button class="bp" id="tmadd">추가</button></div><button class="ab" style="background:var(--indigo);width:100%;margin-top:8px" id="tmdone">완료</button></div>'; }
   function bnd(){ document.getElementById('mxbtn').addEventListener('click',closeModal); document.getElementById('tmlist').querySelectorAll('[data-tidx]').forEach(function(btn){btn.addEventListener('click',function(){S.tags.splice(+this.getAttribute('data-tidx'),1);saveData();document.getElementById('mdc').innerHTML=mkH();bnd();});}); document.getElementById('tmadd').addEventListener('click',function(){var v=document.getElementById('tmnew').value.trim();if(!v)return;if(S.tags.indexOf(v)>=0){alert('이미 있습니다');return;}S.tags.push(v);saveData();document.getElementById('mdc').innerHTML=mkH();bnd();}); document.getElementById('tmnew').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('tmadd').click();}); document.getElementById('tmdone').addEventListener('click',closeModal); }
@@ -2237,6 +2384,10 @@ document.getElementById('pw-enter').addEventListener('click', tryEnter);
 document.getElementById('pw-input').addEventListener('keydown', function(e){ if(e.key==='Enter') tryEnter(); });
 document.getElementById('t1').addEventListener('click', function(){ switchTab('floor'); });
 document.getElementById('t2').addEventListener('click', function(){ switchTab('reserve'); });
+document.getElementById('t3').addEventListener('click', function(){ switchTab('cust'); });
+document.getElementById('custsrch').addEventListener('input', renderCustTab);
+document.getElementById('custsort').addEventListener('change', renderCustTab);
+document.getElementById('btn-cust-notion').addEventListener('click', function(){ runNotionCustBackup(); });
 document.getElementById('btn-view').addEventListener('click', toggleView);
 document.getElementById('bedit').addEventListener('click', toggleEdit);
 document.getElementById('bwait').addEventListener('click', openWaitModal);
